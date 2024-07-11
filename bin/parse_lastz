@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+
+if [[ "$1" == "" || "$2" == "" ]]; then
+  echo "Syntax: filter_lastz <min_length> <min_fraction>"
+  exit 1
+fi
+
+MIN_LENGTH="$1"
+MIN_FRACTION="$2"
+
+# Recombine strands by inverting the target interval when necessary
+awk '
+  BEGIN {
+    t["++"]="+"
+    t["+-"]="-"
+    t["-+"]="-"
+    t["--"]="+"
+  }
+  {
+    print $1"\t"$2"\t"$4"\t"$5"\t"$6"\t"$7"\t"(t[$3$8]=="+"?$9"\t"$10:$10"\t"$9)"\t"gensub("%$","",1,$12)"\t"$13
+  }
+' |
+# Format has 10 columns by now:
+#  query_name query_len query_lo query_hi ref_name ref_len ref_lo ref_hi similarity_in_% LASTZ_score
+# We sort by matching intervals, and uniquify (apparently, there can be multiple matches)
+sort -k1,1 -k3,3n -k4,4n -k5,5 -k7,7n -k8,8n | uniq |
+# For each query segment, we only want to keep its best match to the _same_ reference sequence,
+#  while in principle there could be more than one
+# Things are even more complicated as there could be partially overlapping intervals
+#  mapping to the same reference sequence
+# We add an 11th column with the actual number of matching query bases
+awk '{print $0"\t"($4-$3+1)*$9/100.}' | sort -k1,1 -k5,5 -k3,3n -k4,4n |
+awk '
+  function print_best() {
+    if (current!="")
+      print best;
+    return
+  }
+  {
+    # We cannot just index by interval here, as there might be partially overlapping intervals
+    if ($1"\t"$5!=current||$3>hi) {
+      print_best()
+      current=$1"\t"$5
+      hi=$4
+      max=$11
+      best=$1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10
+    } else # The interval belongs to the same chain of overlapping intervals
+      if ($11>max) {
+        hi=$4
+        max=$11
+        best=$1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10
+      }
+  }
+  END {
+    print_best()
+  }
+' |
+# Back to the 10-column format
+#DEBUG# tee /dev/stderr |
+# For each contig, we accumulate matches to each reference sequence and select the best reference
+awk '
+  {
+    t[$1"\t"$2"\t"$5"\t"$6]+=($4-$3+1)
+  }
+  END {
+    for (i in t)
+      print i"\t"t[i]
+  }
+' |
+# The format is now 5 columns:
+#  query_name query_len ref_name ref_len query_total_match_len
+# We add a 6th column with the fractional query length
+awk '{print $0"\t"($5/$2)}' |
+# We select the best reference for each contig
+sort -k1,1 -k3,3 | awk '
+  {
+    if (!($1 in max)||$6>max[$1]) {
+      max[$1]=$6
+      best[$1]=$0
+    }
+  }
+  END {
+    for (i in max)
+      print best[i];
+  }
+' | sort -k1,1 |
+# We filter contigs
+awk -v MIN_LENGTH="$MIN_LENGTH" -v MIN_FRACTION="$MIN_FRACTION" '{if ($2>=MIN_LENGTH&&$6>=MIN_FRACTION) print}'
+

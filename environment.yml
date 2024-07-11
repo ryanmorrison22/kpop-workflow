@@ -1,0 +1,20 @@
+name: kpop
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - kpop
+  - bash >=4.4.18
+  - r-tidyverse
+  - r-ape
+  - r-phangorn
+  - r-ggplot2
+  - r-ggrepel
+  - r-plot3D
+  - bioconductor-ggtree
+  - bioconductor-ggtreeextra
+  - megahit
+  - flash
+  - lastz
+  - seqtk

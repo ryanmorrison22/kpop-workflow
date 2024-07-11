@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+
+TWISTER="$1"
+TWISTED="$2"
+POWER="$3"
+if [[ "$POWER" == "" ]]; then
+  POWER="2"
+fi
+DISTANCE="$4"
+if [[ "$DISTANCE" == "" ]]; then
+  DISTANCE="euclidean"
+fi
+MAGIC="$5"
+if [[ "$MAGIC" == "" ]]; then
+  MAGIC="1."
+fi
+
+if [[ "$TWISTER" == "" || "$TWISTED" == "" ]]; then
+  echo "This is the KPopTwist program (version 0.5)"
+  echo " (c) 2022 Paolo Ribeca, <paolo.ribeca@gmail.com>"
+  echo " (c) 2022 Xavier Didelot, <xavier.didelot@warwick.ac.uk>"
+  echo "Usage: <twister> <twisted> [<power> [<distance> [<magic>]]]"
+  exit 1
+fi
+
+KPopTwistDB -i t "$TWISTED" -O t "$TWISTED" -v
+KPopTwistDB -i T "$TWISTER" -m "powers(1,1,"$POWER")" -O T "$TWISTER" -O m "${TWISTER}.powx" -v
+# We only need the inertias, not the twister itself
+rm -f "${TWISTER}.KPopTwister.txt"
+KPopTwistDB -i T "$TWISTER" -O m "${TWISTER}.sigm" -v
+
+Rscript --vanilla <(
+cat <<'_____'
+
+  library(tidyverse)
+  library(ape)
+  library(phangorn)
+  #library(phylogram) # For as.phylo
+  #library(dendextend)
+  #library(fastcluster)
+
+  library(ggplot2)
+  library(ggrepel)
+  library(plot3D)
+
+  scatter3D_fancy <- function(x, y, z,..., colvar = z) {
+    panelfirst <- function(pmat) {
+      XY <- trans3D(x, y, z = rep(min(z), length(z)), pmat = pmat)
+      scatter2D(XY$x, XY$y, colvar = colvar, pch = ".", cex = 2, add = TRUE, colkey = FALSE)
+      XY <- trans3D(x = rep(min(x), length(x)), y, z, pmat = pmat)
+      scatter2D(XY$x, XY$y, colvar = colvar, pch = ".", cex = 2, add = TRUE, colkey = FALSE)
+    }
+    scatter3D(x, y, z, ..., colvar = colvar, panel.first=panelfirst, colkey = list(length = 0.5, width = 0.5, cex.clab = 0.75))
+  }
+
+  args<-commandArgs(trailingOnly=TRUE)
+  # Distance (optional)
+  if (is.na(args[4]))
+    args[4]<-"euclidean"
+  # Magic (optional)
+  if (is.na(args[5]))
+    args[5]<-"1."
+  if (is.na(args[6]))
+    args[6]<-args[2]
+  if (as.numeric(args[3])!="2.5")
+    args[6]<-paste0(args[6],"_",args[3])
+  if (args[4]!="euclidean")
+    args[6]<-paste0(args[6],"_",args[4])
+
+  coords<-read.table(paste0(args[2],".KPopTwisted.txt"),header=TRUE,row.names=1,sep="\t")
+  coords<-as.data.frame(coords)
+  t_coords<-t(coords)
+  vars<-read.table(paste0(args[1],".KPopInertia.txt"),header=TRUE,row.names=1,sep="\t")
+  metr_powx<-read.table(paste0(args[1],".powx.KPopMetrics.txt"),header=TRUE,row.names=1,sep="\t")
+  metr_sigm<-read.table(paste0(args[1],".sigm.KPopMetrics.txt"),header=TRUE,row.names=1,sep="\t")
+
+  weights<-sqrt(metr_powx) #*metr_sigm)
+
+#metr_powx
+#metr_sigm
+#weights
+
+  #
+  scaled<-data.frame()
+  for (i in 1:ncol(t_coords)) {
+    scaled<-rbind(scaled,t_coords[,i]*weights)
+  }
+
+#scaled
+#rownames(t_coords)
+
+  rownames(scaled)<-colnames(t_coords)
+  colnames(scaled)<-rownames(t_coords)
+  #scaled<-t(scaled)
+  #
+  modified_output<-args[6]
+  #
+  ggsave(plot=ggplot(data=as.data.frame(scaled))+theme_bw()+geom_point(aes(x=Dim1,y=Dim2),col="red")+geom_text_repel(aes(x=Dim1,y=Dim2,label=rownames(scaled)),max.overlaps=25)+xlab(paste0("Dimension 1 (",round(100.*vars[1,1],digits=1),"%)"))+ylab(paste0("Dimension 2 (",round(100.*vars[1,2],digits=1),"%)"))+theme(panel.grid.major=element_blank(),panel.grid.minor=element_blank()),file=paste0(modified_output,".2D.pdf"),device="pdf",title=paste0(modified_output,".2D"),useDingbats=FALSE)
+  #
+  pdf(paste0(modified_output,".3D.pdf"),title=paste0(modified_output,".3D"),useDingbats=FALSE)
+  scatter3D_fancy(x=scaled[,1],y=scaled[,2],z=scaled[,3],phi=0,pch=20,cex=1)
+  text3D(x=scaled[,1],y=scaled[,2],z=scaled[,3]+0.03*(max(scaled[,3])-min(scaled[,3])),labels=rownames(scaled),cex=0.6,add=TRUE)
+  dev.off()
+  #
+  ddist<-function(...) {dist(method=args[4],...)}
+  di<-ddist(scaled)
+  nj<-midpoint(nj(di))  # midpoint(as.phylo(hclust(di,method=args[X])))
+  #
+write.table(as.matrix(scaled),paste0(modified_output,".embedding.txt"),sep="\t")
+write.table(as.matrix(di),paste0(modified_output,".distances.txt"),sep="\t")
+  write.tree(nj,paste0(modified_output,".NJ.nwk"))
+  #
+  pdf(paste0(modified_output,".NJ.pdf"),title=paste0(modified_output,".NJ"),useDingbats=FALSE,height=1.+max(nrow(scaled)/8.,2.))
+  #de<-reorder(as.dendrogram(as.hclust(midpoint(as.phylo(hc)))),rowMeans(ma))
+  plot(nj,cex=0.6,label.offset=0.02)
+  dev.off()
+  #
+  #clusters<-get_clusters(di,method=args[4],magic=as.numeric(args[5]),verbose=TRUE)
+  #print_clusters(clusters,paste0(modified_output,".clusters.txt"))
+  #
+  #pdf(paste0(modified_output,".heatmap.pdf"),title=paste0(modified_output,".heatmap"),useDingbats=FALSE)
+  #heatmap(as.matrix(di),hclustfun=ape::nj)
+  #dev.off()
+_____
+) "$TWISTER" "$TWISTED" "$POWER" "$DISTANCE" "$MAGIC"
+
