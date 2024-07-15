@@ -50,7 +50,7 @@ if (ncol(extra_columns) > 1) {
     tree <- tree + 
       new_scale_fill() +
       geom_fruit(geom=geom_tile,
-        mapping=aes(fill=factor(.data[[i]], levels = str_sort(levels(factor(.data[[i]]))))),      
+        mapping=aes(fill=factor(.data[[i]], levels = str_sort(levels(factor(.data[[i]]))))),
         offset = 0.25,width = 0.25) + 
       scale_fill_brewer(palette=colour_palettes[count]) +
       labs(fill = i)

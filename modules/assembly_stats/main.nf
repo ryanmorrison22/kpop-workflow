@@ -34,5 +34,3 @@ process ASSEMBLY_STATS {
         echo "\$quants" >> ${prefix.fileName}_assembly_stats.txt
         """
 }
-
-//printf("%d\n",((NR/4)*1)+=((NR/4)*1)<0?0:0.999)

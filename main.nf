@@ -14,6 +14,10 @@ include { MATCH_REFERENCE_CONTIGS as MATCH_REFERENCE_CONTIGS2} from './modules/m
 include { ASSEMBLY_STATS as ASSEMBLY_STATS1} from './modules/assembly_stats'
 include { ASSEMBLY_STATS as ASSEMBLY_STATS2} from './modules/assembly_stats'
 include { META_COLOURED_TREE } from './modules/meta_coloured_tree'
+include { DOWNLOAD_SRAS as DOWNLOAD_SRAS1} from './modules/download_samples'
+include { DOWNLOAD_SRAS as DOWNLOAD_SRAS2} from './modules/download_samples'
+include { FASTERQ_DUMP as FASTERQ_DUMP1} from './modules/download_samples'
+include { FASTERQ_DUMP as FASTERQ_DUMP2} from './modules/download_samples'
 
 // Create a help message
 def helpMessage() {
@@ -96,42 +100,74 @@ if (!params.cluster && !params.classify){
     exit 0
 }
 
-if (params.input_dir == ""){
-    log.error"""--input_dir required for workflow. Use --help for more information.
+if (params.input_dir == "" && params.accession_list == ""){
+    log.error"""--input_dir or --accession_list required for workflow. Use --help for more information.
     """.stripIndent()
     exit 0
 }
 
-if (params.classify && params.test_dir == ""){
-    log.error"""--test_dir required for --classify workflow. Use --help for more information.
+if (params.classify && params.test_dir == "" && params.test_accession_list == ""){
+    log.error"""--test_dir or --test_accession_list required for --classify workflow. Use --help for more information.
     """.stripIndent()
     exit 0
 }
 
-// Channels created for all fastas, paired fastas and all paired fastqs in input_dir
-FASTAS = "${params.input_dir}/*.{fasta,fa,fasta.gz,fa.gz}"
-FASTQS = "${params.input_dir}/*.{fastq,fq,fastq.gz,fq.gz}"
-PAIRED_FASTQS = "${params.input_dir}/*_{R1,R2}.{fastq,fq,fastq.gz,fq.gz}"
+if (params.input_dir != "") {
+    // Channels created for all fastas, paired fastas and all paired fastqs in input_dir, error if no fasta or fastq files ound in input_dir
+    FASTAS = "${params.input_dir}/*.{fasta,fa,fasta.gz,fa.gz}"
+    FASTQS = "${params.input_dir}/*.{fastq,fq,fastq.gz,fq.gz}"
+    PAIRED_FASTQS = "${params.input_dir}/*_{R1,R2}.{fastq,fq,fastq.gz,fq.gz}"
 
-Channel
-    .fromPath( FASTAS )
-    .map { it -> [[fileName: it.toString().split("/")[-1]], [file(it)]]}
-    .set {fasta_files}
+    Channel
+        .fromPath( FASTAS )
+        .map { it -> [[fileName: it.toString().split("/")[-1]], [file(it)]]}
+        .set {fasta_files}
 
-Channel
-    .fromFilePairs( PAIRED_FASTQS )
-    .map { it -> [[fileName: it[0].toString()], it[1]]}
-    .set {paired_fastq_files}
+    Channel
+        .fromFilePairs( PAIRED_FASTQS )
+        .map { it -> [[fileName: it[0].toString()], it[1]]}
+        .set {paired_fastq_files}
 
-Channel
-    .fromPath( FASTQS )
-    .map { it -> [[fileName: it.toString().split("/")[-1]], [file(it)]]}
-    .filter { !(it.fileName =~ /(R1|R2)/) }
-    .concat(paired_fastq_files)
-    .set {fastq_files}
+    Channel
+        .fromPath( FASTQS )
+        .map { it -> [[fileName: it.toString().split("/")[-1]], [file(it)]]}
+        .filter { !(it.fileName =~ /(R1|R2)/) }
+        .concat(paired_fastq_files)
+        .set {fastq_files}
+
+    if (!file( FASTAS ) && !file( FASTQS ) && !file( PAIRED_FASTQS)){
+        log.error"""--input_dir needs to contain at least one fasta or fastq file. Please check specified directory again. Use --help for more information.
+        """.stripIndent()
+        exit 0
+    }
+
+    fasta_files
+        .concat(fastq_files)
+        .map {it -> it[0].fileName}
+        .filter{ if (it =~/[\[\]\?\*\ ]/) {throw new IllegalArgumentException("Value '$it' contains illegal character")} }
+
+} else {
+    Channel
+        .empty()
+        .set {fasta_files}
+    
+    Channel
+        .empty()
+        .set {paired_fastq_files}
+
+    Channel
+        .empty()
+        .set {fastq_files}
+}
 
 // Create channel that includes class meta data for training
 if (params.meta_data != "") {
+    if (!("fileName" in file(params.meta_data).splitCsv(header:true, sep: "\t").first().keySet()) || !("class" in file(params.meta_data).splitCsv(header:true, sep: "\t").first().keySet())) {
+        log.error"""File given with --meta_data needs to have two columns named 'fileName' and 'class' in it. Please check header names in specified file again. Use --help for more information.
+        """.stripIndent()
+        exit 0  
+    }
+
     Channel
         .fromPath(params.meta_data)
         .ifEmpty {exit 1, log.info "Cannot find path file ${meta_data}"}
@@ -145,12 +181,18 @@ if (params.meta_data != "") {
         .set {meta_fasta_files}
 }
 
-// Channels created for all fastas, paired fastas and all paired fastqs in test_dir
+// Channels created for all fastas, paired fastas and all paired fastqs in test_dir, error if no files found in test_dir
 if (params.test_dir != "") {
     TEST_FASTAS = "${params.test_dir}/*.{fasta,fa,fasta.gz,fa.gz}"
     TEST_FASTQS = "${params.test_dir}/*.{fastq,fq,fastq.gz,fq.gz}"
     TEST_PAIRED_FASTQS = "${params.test_dir}/*_{R1,R2}.{fastq,fq,fastq.gz,fq.gz}"
     
+    if (!file( TEST_FASTAS ) && !file( TEST_FASTQS ) && !file( TEST_PAIRED_FASTQS && params.test_accession_list == "")){
+        log.error"""--test_dir needs to contain at least one fasta or fastq file. Please check specified directory again. Use --help for more information.
+        """.stripIndent()
+        exit 0
+    }
+
     Channel
     .fromPath( TEST_FASTAS )
     .map { it -> [[fileName: it.toString().split("/")[-1]], [file(it)]]}
@@ -167,9 +209,49 @@ if (params.test_dir != "") {
     .filter { !(it.fileName =~ /(R1|R2)/) }
     .concat(test_paired_fastq_files)
     .set {test_fastq_files}
+
+    test_fasta_files
+    .concat(test_fastq_files)
+    .map {it -> it[0].fileName}
+    .filter{ if (it =~/[\[\]\?\*\ ]/) {throw new IllegalArgumentException("Value '$it' contains illegal character")} }
+
+} else {
+    Channel
+        .empty()
+        .set {test_fasta_files}
+    
+    Channel
+        .empty()
+        .set {test_paired_fastq_files}
+
+    Channel
+        .empty()
+        .set {test_fastq_files}
 }
 
 workflow {
+    // Download training set
+    if (params.accession_list != "") {
+        DOWNLOAD_SRAS1(params.accession_list)
+            .flatten()
+            .set {SRA_FILES}
+        FASTERQ_DUMP1(SRA_FILES)
+            .map {it -> [[fileName: it[0].toString()], it[1]]}
+            .concat(fastq_files)
+            .set {fastq_files}
+    }
+
+    // Download test set
+    if (params.test_accession_list != "") {
+        DOWNLOAD_SRAS2(params.test_accession_list)
+            .flatten()
+            .set {TEST_SRA_FILES}
+        FASTERQ_DUMP2(TEST_SRA_FILES)
+            .map {it -> [[fileName: it[0].toString()], it[1]]}
+            .concat(test_fastq_files)
+            .set {test_fastq_files}
+    }
+
     // Clustering workflow
     if (params.cluster) {
         ASSEMBLE_FASTQS1(fastq_files)
@@ -256,5 +338,3 @@ workflow {
         PREDICT_TEST_SET(train_test_kpop_files)
     }
 }
-
-
