@@ -8,15 +8,15 @@ conda activate kpop​
 ```
 
 Currently, there are two main workflows:
-      1.Clustering workflow - starting with unknown dataset running through KPop and generating a pseudo-phylogenetic tree showing relatedness:
-      ```
-      nextflow run main.nf --cluster --input_dir /dir/containing/fastqAndFastas
-      ```
+1. Clustering workflow - starting with unknown dataset running through KPop and generating a pseudo-phylogenetic tree showing relatedness:
+```
+nextflow run main.nf --cluster --input_dir /dir/containing/fastqAndFastas
+```
 
-      2. Classifying workflow - starting with a known training dataset with meta data, such as classes/species, and predicting the class/species of an unknown test set:
-      ```
-      nextflow run main.nf --classify --input_dir /dir/containing/training/fastqAndFastas --meta_data /path/to/meta/file --test_dir /dir/containing/test/fastqAndFastas
-      ```
+2. Classifying workflow - starting with a known training dataset with meta data, such as classes/species, and predicting the class/species of an unknown test set:
+```
+nextflow run main.nf --classify --input_dir /dir/containing/training/fastqAndFastas --meta_data /path/to/meta/file --test_dir /dir/containing/test/fastqAndFastas
+```
 Both workflows create lots of files, but the most important outputs are the KPop pseudo-phylogenetic tree found in results/trees_and_metrics/output_2.<nwk/pdf> (--cluster) and the class/species predictions found in results/predictions/output.<predictions/KPopSummary>.txt (--classify).
 
 **Workflows**
