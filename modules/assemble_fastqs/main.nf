@@ -1,5 +1,6 @@
 process ASSEMBLE_FASTQS {
     //debug true
+    tag {"$fileName.fileName"}
     cpus = params.cpu_num
     //conda "${moduleDir}/environment.yml"
     publishDir "${params.output_dir}/assemblies"

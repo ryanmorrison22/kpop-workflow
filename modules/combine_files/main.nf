@@ -1,6 +1,7 @@
 #!/usr/bin/env nextflow
 
 process COMBINE_FILES {
+    tag {"$fileName.fileName"}
     cpus = params.cpu_num
     //conda "${moduleDir}/environment.yml"
     publishDir "${params.output_dir}/modified_fasta_files"
@@ -33,6 +34,7 @@ process COMBINE_FILES {
 }
 
 process COMBINE_FILES_BY_CLASS {
+    tag {"Class $meta_class"}
     cpus = params.cpu_num
     //conda "${moduleDir}/environment.yml"
     publishDir "${params.output_dir}/modified_fasta_files"

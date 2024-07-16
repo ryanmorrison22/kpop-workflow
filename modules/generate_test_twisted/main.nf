@@ -8,7 +8,7 @@ process GENERATE_TEST_TWISTED {
     tuple path(train_twister), path(train_twisted), path(test_fasta)
  
     output:
-    tuple path(train_twister), path(train_twisted), path("test.KPopTwisted")//j, emit: twisted_files
+    tuple path(train_twister), path(train_twisted), path("test.KPopTwisted")
 
     script:
         def args = task.ext.args ?: ''

@@ -33,18 +33,21 @@ Required arguments:
                                             a model is created using the training dataset and known class metadata> This model is used to \
                                             predict the classes of the unknown test dataset. Requires --test_dir argument.   
 
-    Input                   
+    Input (At least one of these)                  
         --input_dir                         Path to directory containing fasta/fastq files. Paired-end fastqs require "R1" and "R2" in filenames. \
                                             Gzipped files are allowed. \
                                             If --classify used this directory is the training dataset.
-        --test_dir                          Directory containing unseen test dataset. Only required if --classify workflow invoked.
+        --accession_list                    Supply a list of SRA IDs to download as input samples in the form of a text file, with one SRA per line.
+
+        --test_dir                          Directory containing unseen test dataset. Only required if --classify workflow invoked. 
+        --test_accession_list               Supply a list of SRA IDs to download as test samples in the form of a text file, with one SRA per line. Only required if --classify workflow invoked. 
 
 Optional arguments:
     General arguments
         --kmer_len                          Length of k-mer to use when generating spectra [12] 
-        --output_dir                        Path to output directory [projectDir/results]
+        --output_dir                        Path to output directory. If directory doesn't exist then a new directory will be created. [projectDir/results]
         --output_prefix                     Prefix for output files [output]
-        --cpu_num                           Number of CPUs used per process [4] 
+        --cpu_num                           Number of CPUs used per process [8] 
         --meta_data                         Tsv file with two required columns with defined headers; "fileName" and "class". \
                                             "fileName" is file name if a fasta or fasta.gz file, or file prefix if paired-end fastqs. E.g. sample1.fasta.gz if fasta file or \
                                             sample1 if sample1_R1.fastq.gz and sample1_R2.fastq.gz. Additional columns allowed
