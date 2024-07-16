@@ -18,6 +18,7 @@ include { DOWNLOAD_SRAS as DOWNLOAD_SRAS1} from './modules/download_samples'
 include { DOWNLOAD_SRAS as DOWNLOAD_SRAS2} from './modules/download_samples'
 include { FASTERQ_DUMP as FASTERQ_DUMP1} from './modules/download_samples'
 include { FASTERQ_DUMP as FASTERQ_DUMP2} from './modules/download_samples'
+include { GENERATE_KPOPTWISTED; KPOPTWIST_UPDATE } from './modules/retwist'
 
 // Create a help message
 def helpMessage() {
@@ -31,16 +32,20 @@ Required arguments:
                                             a distance matrix and pseudophylogenetic tree showing relatedness between samples.                 
         --classify                          Data is run through classification workflow, starting with separate training and test datasets, \
                                             a model is created using the training dataset and known class metadata> This model is used to \
-                                            predict the classes of the unknown test dataset. Requires --test_dir argument.   
+                                            predict the classes of the unknown test dataset. Requires --test_dir argument.  
+        --update                            New data is run added to the existing database, creating updated .KPopTwister and KPopTwisted files.
 
     Input (At least one of these)                  
         --input_dir                         Path to directory containing fasta/fastq files. Paired-end fastqs require "R1" and "R2" in filenames. \
                                             Gzipped files are allowed. \
-                                            If --classify used this directory is the training dataset.
+                                            If --classify used this directory is the training dataset. \
+                                            If --update used this directory is the new dataset used to update.
         --accession_list                    Supply a list of SRA IDs to download as input samples in the form of a text file, with one SRA per line.
 
         --test_dir                          Directory containing unseen test dataset. Only required if --classify workflow invoked. 
         --test_accession_list               Supply a list of SRA IDs to download as test samples in the form of a text file, with one SRA per line. Only required if --classify workflow invoked. 
+        --twisted_file                      Full path to .KPopTwisted file. Only required for --update workflow.
+        --twister_file                      Full path to .KPopTwister file. Only required for --update workflow.
 
 Optional arguments:
     General arguments
@@ -97,8 +102,8 @@ if (params.help){
 }
 
 // Define errors
-if (!params.cluster && !params.classify){
-    log.error"""--cluster or --classify required for workflow. Use --help for more information.
+if (!params.cluster && !params.classify && !params.update){
+    log.error"""--cluster, --classify or --update required for workflow. Use --help for more information.
     """.stripIndent()
     exit 0
 }
@@ -339,5 +344,33 @@ workflow {
             .map(it -> [it[0][0], it[0][1], it[2]])
         train_test_kpop_files = GENERATE_TEST_TWISTED(train_test_files)
         PREDICT_TEST_SET(train_test_kpop_files)
+    }
+
+        // Update workflow
+    if (params.update) {
+        ASSEMBLE_FASTQS1(fastq_files)
+            .map(it -> [it[0], [it[1]]])
+            .set {assembled_fastas}
+        ASSEMBLY_STATS1(assembled_fastas)
+        assembled_fastas.concat(fasta_files)
+            .set {concat_fasta_files}
+        if (params.match_reference != "") {
+            concat_fasta_files
+                .map(it -> [it[1][0], it[0].fileName])
+                .set {adjusted_concat_fasta_files}
+            MATCH_REFERENCE_CONTIGS1(adjusted_concat_fasta_files)
+                .map(it -> [[fileName: it[1]], [it[0]]])
+                .set {concat_fasta_files}
+        }
+        COMBINE_FILES(concat_fasta_files)
+            .collectFile(name: "${params.output_dir}/modified_fasta_files/${params.output_prefix}_combined.fasta.gz", newLine: false)
+            .map(it -> [it, params.output_prefix])
+            .set {combined_fasta}
+        KPOPCOUNT(combined_fasta)
+            .map(it -> [it, params.output_prefix])
+            .set {kpopcount_file}
+        GENERATE_KPOPTWISTED(kpopcount_file)
+            .set {updating_file}
+        KPOPTWIST_UPDATE(updating_file)
     }
 }
