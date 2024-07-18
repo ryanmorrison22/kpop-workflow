@@ -13,6 +13,7 @@ dependencies:
   - r-ggplot2
   - r-ggrepel
   - r-plot3D
+  - r-codetools
   - bioconductor-ggtree
   - bioconductor-ggtreeextra
   - megahit
@@ -21,3 +22,4 @@ dependencies:
   - seqtk
   - entrez-direct #Not used yet
   - sra-tools >=3.1.1
+
