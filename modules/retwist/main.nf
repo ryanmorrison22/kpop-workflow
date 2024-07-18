@@ -4,15 +4,15 @@ process GENERATE_KPOPTWISTED {
     publishDir "${params.output_dir}/KPopTwist_files"
 
     input:
-    tuple path(counter_file), val(prefix)
+    tuple path(counter_file), val(prefix), path(twister_file), path(twisted_file)
  
     output:
-    tuple path("temp.KPopTwisted"), val(prefix)
+    tuple path("temp.KPopTwisted"), val(prefix), path(twister_file), path(twisted_file)
 
     script:
         def args = task.ext.args ?: ''
         """
-        twister_prefix=\$(echo ${params.twister_file} | sed 's/.KPopTwister//')
+        twister_prefix=\$(echo $twister_file | sed 's/.KPopTwister//')
         KPopCountDB -i $prefix -t updating
         for i in \$(seq 2 \$(awk '{print NF; exit}' updating.KPopCounter.txt)) ; do cut -f1,\${i} updating.KPopCounter.txt ; done | KPopTwistDB -i T \$twister_prefix -k /dev/stdin -o t temp -v
         rm updating.KPopCounter.txt
@@ -25,7 +25,7 @@ process KPOPTWIST_UPDATE {
     publishDir "${params.output_dir}/updated_KPopTwist_files"
 
     input:
-    tuple path(updating_file), val(prefix)
+    tuple path(updating_file), val(prefix), path(twister_file), path(twisted_file)
  
     output:
     path("${prefix}.KPopTwisted")
@@ -33,8 +33,8 @@ process KPOPTWIST_UPDATE {
     script:
         def args = task.ext.args ?: ''
         """
-        twister_prefix=\$(echo ${params.twister_file} | sed 's/.KPopTwister//')
-        twisted_prefix=\$(echo ${params.twisted_file} | sed 's/.KPopTwisted//')
+        twister_prefix=\$(echo $twister_file | sed 's/.KPopTwister//')
+        twisted_prefix=\$(echo $twisted_file | sed 's/.KPopTwisted//')
         updating_prefix=\$(echo $updating_file | sed 's/.KPopTwisted//')
         KPopTwistDB -i T \$twister_prefix -i t \$twisted_prefix -a t \$updating_prefix -o t ${prefix} 
         """

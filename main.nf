@@ -275,7 +275,7 @@ workflow {
             .set {concat_fasta_files}
         if (params.match_reference != "") {
             concat_fasta_files
-                .map(it -> [it[1][0], it[0].fileName])
+                .map(it -> [it[1][0], it[0].fileName, file(params.match_reference)])
                 .set {adjusted_concat_fasta_files}
             MATCH_REFERENCE_CONTIGS1(adjusted_concat_fasta_files)
                 .map(it -> [[fileName: it[1]], [it[0]]])
@@ -314,7 +314,7 @@ workflow {
             .set {concat_meta_fasta_files}
         if (params.match_reference != "") {
             concat_meta_fasta_files
-                .map(it -> [it[1], "${it[0].meta_class}_${it[1].getBaseName(file(it[1]).name.endsWith('.gz')? 2: 1)}"])
+                .map(it -> [it[1], "${it[0].meta_class}_${it[1].getBaseName(file(it[1]).name.endsWith('.gz')? 2: 1)}", file(params.match_reference)])
                 .set {adjusted_concat_meta_fasta_files}
             MATCH_REFERENCE_CONTIGS1(adjusted_concat_meta_fasta_files)
                 .map(it -> [[meta_class: it[1].toString().split("_")[0]], it[0]])
@@ -361,7 +361,7 @@ workflow {
             .set {concat_fasta_files}
         if (params.match_reference != "") {
             concat_fasta_files
-                .map(it -> [it[1][0], it[0].fileName])
+                .map(it -> [it[1][0], it[0].fileName, file(params.match_reference)])
                 .set {adjusted_concat_fasta_files}
             MATCH_REFERENCE_CONTIGS1(adjusted_concat_fasta_files)
                 .map(it -> [[fileName: it[1]], [it[0]]])
@@ -372,7 +372,7 @@ workflow {
             .map(it -> [it, params.output_prefix])
             .set {combined_fasta}
         KPOPCOUNT(combined_fasta)
-            .map(it -> [it, params.output_prefix])
+            .map(it -> [it, params.output_prefix, file(params.twister_file), file(params.twisted_file)])
             .set {kpopcount_file}
         GENERATE_KPOPTWISTED(kpopcount_file)
             .set {updating_file}

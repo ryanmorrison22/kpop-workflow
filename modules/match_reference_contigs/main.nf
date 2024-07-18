@@ -4,7 +4,7 @@ process MATCH_REFERENCE_CONTIGS {
     publishDir "${params.output_dir}/matched_contig_files"
 
     input:
-    tuple path(combined_fasta_file), val(prefix)
+    tuple path(combined_fasta_file), val(prefix), path(match_reference)
  
     output:
     tuple path("*_matched.fasta.gz"), val(prefix)
@@ -18,7 +18,7 @@ process MATCH_REFERENCE_CONTIGS {
         else 
             open_file=cat
         fi
-        lastz ${params.match_reference}[multiple,unmask] <(\$open_file $combined_fasta_file)[unmask] \\
+        lastz ${match_reference}[multiple,unmask] <(\$open_file $combined_fasta_file)[unmask] \\
             --notransition \\
             --step=${params.lastz_step} \\
             --nogapped \\
