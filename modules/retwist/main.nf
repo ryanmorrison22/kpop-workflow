@@ -28,7 +28,7 @@ process KPOPTWIST_UPDATE {
     tuple path(updating_file), val(prefix), path(twister_file), path(twisted_file)
  
     output:
-    path("${prefix}.KPopTwisted")
+    tuple path("${prefix}.KPopTwisted"), val(prefix), path(twister_file), path(twisted_file)
 
     script:
         def args = task.ext.args ?: ''
@@ -40,3 +40,44 @@ process KPOPTWIST_UPDATE {
         """
 }
 
+process UPDATE_PLOT {
+    cpus = params.cpu_num
+    //conda "${moduleDir}/environment.yml"
+    publishDir "${params.output_dir}/updated_KPopTwist_files"
+
+    input:
+    tuple path(updated_file), val(prefix), path(twister_file), path(twisted_file)
+ 
+    output:
+    path("${prefix}_updated_comparison.pdf")
+
+    script:
+        def args = task.ext.args ?: ''
+        """
+        twister_prefix=\$(echo $twister_file | sed 's/.KPopTwister//')
+        twisted_prefix=\$(echo $twisted_file | sed 's/.KPopTwisted//')
+        updated_prefix=\$(echo $updated_file | sed 's/.KPopTwisted//')
+        
+        $projectDir/bin/KPopPhylo \\
+        \$twister_prefix  \\
+        \$twisted_prefix \\
+        ${params.kpopphylo_power} \\
+        ${params.kpopphylo_distance} \\
+        ${params.kpopphylo_magic} \\
+        ${params.tree_type} \\
+        ${params.tree_label_size} \\
+        $args
+        
+        $projectDir/bin/KPopPhylo \\
+        \$twister_prefix  \\
+        \$updated_prefix \\
+        ${params.kpopphylo_power} \\
+        ${params.kpopphylo_distance} \\
+        ${params.kpopphylo_magic} \\
+        ${params.tree_type} \\
+        ${params.tree_label_size} \\
+        $args
+
+        $projectDir/bin/updated_tree.R \${twisted_prefix}.NJ.nwk \${updated_prefix}.NJ.nwk  ${prefix}_updated_comparison.pdf
+        """
+}

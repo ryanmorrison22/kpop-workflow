@@ -18,7 +18,7 @@ include { DOWNLOAD_SRAS as DOWNLOAD_SRAS1} from './modules/download_samples'
 include { DOWNLOAD_SRAS as DOWNLOAD_SRAS2} from './modules/download_samples'
 include { FASTERQ_DUMP as FASTERQ_DUMP1} from './modules/download_samples'
 include { FASTERQ_DUMP as FASTERQ_DUMP2} from './modules/download_samples'
-include { GENERATE_KPOPTWISTED; KPOPTWIST_UPDATE } from './modules/retwist'
+include { GENERATE_KPOPTWISTED; KPOPTWIST_UPDATE; UPDATE_PLOT } from './modules/retwist'
 
 // Create a help message
 def helpMessage() {
@@ -377,5 +377,7 @@ workflow {
         GENERATE_KPOPTWISTED(kpopcount_file)
             .set {updating_file}
         KPOPTWIST_UPDATE(updating_file)
+            .set {updated_files}
+        UPDATE_PLOT(updated_files)
     }
 }
