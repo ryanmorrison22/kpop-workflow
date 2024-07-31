@@ -4,7 +4,7 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - nexflow
+  - nextflow
   - kpop
   - bash >=4.4.18
   - r-tidyverse
@@ -20,6 +20,5 @@ dependencies:
   - flash
   - lastz
   - seqtk
-  - entrez-direct #Not used yet
   - sra-tools >=3.1.1
 

@@ -1,6 +1,4 @@
 process KPOPCOUNT_BY_CLASS {
-    cpus = params.cpu_num
-    //conda "${moduleDir}/environment.yml"
     publishDir "${params.output_dir}/kmer_counts"
 
     input:
@@ -23,7 +21,6 @@ process KPOPCOUNT_BY_CLASS {
 
 process KPOPCOUNT {
     cpus = params.cpu_num
-    //conda "${moduleDir}/environment.yml"
     publishDir "${params.output_dir}/kmer_counts"
 
     input:

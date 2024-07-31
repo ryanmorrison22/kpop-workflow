@@ -1,6 +1,5 @@
 process KPOPTWIST {
     cpus = params.cpu_num
-    //conda "${moduleDir}/environment.yml"
     publishDir "${params.output_dir}/KPopTwist_files"
 
     input:

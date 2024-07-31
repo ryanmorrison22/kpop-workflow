@@ -1,6 +1,5 @@
 process PREDICT_TEST_SET {
     cpus = params.cpu_num
-    //conda "${moduleDir}/environment.yml"
     publishDir "${params.output_dir}/predictions"
 
     input:

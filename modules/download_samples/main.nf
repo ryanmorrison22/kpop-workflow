@@ -1,6 +1,5 @@
 process DOWNLOAD_SRAS {
     cpus = params.cpu_num
-    //conda "${moduleDir}/environment.yml"
     publishDir "${params.output_dir}/downloaded_samples"
 
     input:
@@ -18,7 +17,6 @@ process DOWNLOAD_SRAS {
 process FASTERQ_DUMP {
     tag {"$sra_file"}
     cpus = params.cpu_num
-    //conda "${moduleDir}/environment.yml"
     publishDir "${params.output_dir}/downloaded_samples"
 
     input:

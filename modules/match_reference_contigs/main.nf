@@ -1,6 +1,6 @@
 process MATCH_REFERENCE_CONTIGS {
+    tag {"Matching with $match_reference"}
     cpus = params.cpu_num
-    //conda "${moduleDir}/environment.yml"
     publishDir "${params.output_dir}/matched_contig_files"
 
     input:

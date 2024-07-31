@@ -1,6 +1,5 @@
 process KPOPPHYLO {
     cpus = params.cpu_num
-    //conda "${moduleDir}/environment.yml"
     publishDir "${params.output_dir}/trees_and_metrics"
 
     input:

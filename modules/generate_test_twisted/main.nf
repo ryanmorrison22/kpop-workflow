@@ -1,7 +1,6 @@
 
 process GENERATE_TEST_TWISTED {
     cpus = params.cpu_num
-    //conda "${moduleDir}/environment.yml"
     publishDir "${params.output_dir}/predictions"
 
     input:

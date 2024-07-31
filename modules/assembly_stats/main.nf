@@ -1,7 +1,6 @@
 process ASSEMBLY_STATS {
     tag {"$fasta_file"}
     cpus = params.cpu_num
-    //conda "${moduleDir}/environment.yml"
     publishDir "${params.output_dir}/assembly_statistics"
 
     input:
