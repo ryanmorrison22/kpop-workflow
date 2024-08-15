@@ -9,16 +9,20 @@ include { KPOPTWIST } from './modules/kpopTwist'
 include { PREDICT_TEST_SET } from './modules/predict_test_set'
 include { ASSEMBLE_FASTQS as ASSEMBLE_FASTQS1 } from './modules/assemble_fastqs'
 include { ASSEMBLE_FASTQS as ASSEMBLE_FASTQS2 } from './modules/assemble_fastqs'
-include { MATCH_REFERENCE_CONTIGS as MATCH_REFERENCE_CONTIGS1} from './modules/match_reference_contigs'
-include { MATCH_REFERENCE_CONTIGS as MATCH_REFERENCE_CONTIGS2} from './modules/match_reference_contigs'
-include { ASSEMBLY_STATS as ASSEMBLY_STATS1} from './modules/assembly_stats'
-include { ASSEMBLY_STATS as ASSEMBLY_STATS2} from './modules/assembly_stats'
+include { MATCH_REFERENCE_CONTIGS as MATCH_REFERENCE_CONTIGS1 } from './modules/match_reference_contigs'
+include { MATCH_REFERENCE_CONTIGS as MATCH_REFERENCE_CONTIGS2 } from './modules/match_reference_contigs'
+include { ASSEMBLY_STATS as ASSEMBLY_STATS1 } from './modules/assembly_stats'
+include { ASSEMBLY_STATS as ASSEMBLY_STATS2 } from './modules/assembly_stats'
 include { META_COLOURED_TREE } from './modules/meta_coloured_tree'
-include { DOWNLOAD_SRAS as DOWNLOAD_SRAS1} from './modules/download_samples'
-include { DOWNLOAD_SRAS as DOWNLOAD_SRAS2} from './modules/download_samples'
-include { FASTERQ_DUMP as FASTERQ_DUMP1} from './modules/download_samples'
-include { FASTERQ_DUMP as FASTERQ_DUMP2} from './modules/download_samples'
+include { DOWNLOAD_SRAS as DOWNLOAD_SRAS1 } from './modules/download_samples'
+include { DOWNLOAD_SRAS as DOWNLOAD_SRAS2 } from './modules/download_samples'
+include { FASTERQ_DUMP as FASTERQ_DUMP1 } from './modules/download_samples'
+include { FASTERQ_DUMP as FASTERQ_DUMP2 } from './modules/download_samples'
 include { GENERATE_KPOPTWISTED; KPOPTWIST_UPDATE; UPDATE_PLOT } from './modules/retwist'
+include { INPUT_VALIDATION as FASTA_VALIDATION } from './modules/input_validation'
+include { INPUT_VALIDATION as TEST_FASTA_VALIDATION } from './modules/input_validation'
+include { INPUT_VALIDATION as FASTQ_VALIDATION } from './modules/input_validation'
+include { INPUT_VALIDATION as TEST_FASTQ_VALIDATION } from './modules/input_validation'
 
 // Create a help message
 def helpMessage() {
@@ -33,7 +37,7 @@ Required arguments:
         --classify                          Data is run through classification workflow, starting with separate training and test datasets, \
                                             a model is created using the training dataset and known class metadata> This model is used to \
                                             predict the classes of the unknown test dataset. Requires --test_dir argument.  
-        --update                            New data is run added to the existing database, creating updated .KPopTwister and KPopTwisted files.
+        --update                            New data is run added to an existing database, creating updated .KPopTwister and KPopTwisted files.
 
     Input (At least one of these)                  
         --input_dir                         Path to directory containing fasta/fastq files. Paired-end fastqs require "R1" and "R2" in filenames. \
@@ -186,7 +190,7 @@ if (params.meta_data != "") {
 
     Channel
         .fromPath(params.meta_data)
-        .ifEmpty {exit 1, log.info "Cannot find path file ${meta_data}"}
+        .ifEmpty {exit 1, log.error"""Cannot find path file ${params.meta_data}"""}
         .splitCsv(header:true, sep: "\t")
         .map { row -> meta = [[fileName: row.fileName.toString().split("/")[-1]], [meta_class: row.class]] }
         .set {meta_file}
@@ -203,7 +207,7 @@ if (params.test_dir != "") {
     TEST_FASTQS = "${params.test_dir}/*.{fastq,fq,fastq.gz,fq.gz}"
     TEST_PAIRED_FASTQS = "${params.test_dir}/*_{R1,R2}.{fastq,fq,fastq.gz,fq.gz}"
     
-    if (!file( TEST_FASTAS ) && !file( TEST_FASTQS ) && !file( TEST_PAIRED_FASTQS && params.test_accession_list == "")){
+    if (!file( TEST_FASTAS ) && !file( TEST_FASTQS ) && !file( TEST_PAIRED_FASTQS ) && params.test_accession_list == ""){
         log.error"""--test_dir needs to contain at least one fasta or fastq file. Please check specified directory again. Use --help for more information.
         """.stripIndent()
         exit 0
@@ -248,7 +252,7 @@ if (params.test_dir != "") {
 workflow {
     // Download training set
     if (params.accession_list != "") {
-        DOWNLOAD_SRAS1(params.accession_list)
+        DOWNLOAD_SRAS1(file(params.accession_list))
             .flatten()
             .set {SRA_FILES}
         FASTERQ_DUMP1(SRA_FILES)
@@ -259,7 +263,7 @@ workflow {
 
     // Download test set
     if (params.test_accession_list != "") {
-        DOWNLOAD_SRAS2(params.test_accession_list)
+        DOWNLOAD_SRAS2(file(params.test_accession_list))
             .flatten()
             .set {TEST_SRA_FILES}
         FASTERQ_DUMP2(TEST_SRA_FILES)
@@ -267,6 +271,17 @@ workflow {
             .concat(test_fastq_files)
             .set {test_fastq_files}
     }
+
+    // Input Validation 
+    FASTQ_VALIDATION(fastq_files)
+        .set {fastq_files}
+    TEST_FASTQ_VALIDATION(test_fastq_files)
+        .set {test_fastq_files}
+    FASTA_VALIDATION(fasta_files)
+        .set {fasta_files}
+    TEST_FASTA_VALIDATION(test_fasta_files)
+        .set {test_fasta_files}
+
 
     // Clustering workflow
     if (params.cluster) {
@@ -278,7 +293,7 @@ workflow {
             .set {concat_fasta_files}
         if (params.match_reference != "") {
             concat_fasta_files
-                .map(it -> [it[1][0], it[0].fileName, file(params.match_reference)])
+                .map(it -> [it[1], it[0].fileName, file(params.match_reference)])
                 .set {adjusted_concat_fasta_files}
             MATCH_REFERENCE_CONTIGS1(adjusted_concat_fasta_files)
                 .map(it -> [[fileName: it[1]], [it[0]]])
@@ -344,6 +359,9 @@ workflow {
             .map(it -> [it, "test"])
             .set {test_combined_fasta}
         if (params.match_reference != "") {
+            test_combined_fasta
+                .map(it -> [it[0], it[1], file(params.match_reference)])
+                .set {test_combined_fasta}
             MATCH_REFERENCE_CONTIGS2(test_combined_fasta)
                 .set {test_combined_fasta}
         }
@@ -364,7 +382,7 @@ workflow {
             .set {concat_fasta_files}
         if (params.match_reference != "") {
             concat_fasta_files
-                .map(it -> [it[1][0], it[0].fileName, file(params.match_reference)])
+                .map(it -> [it[1], it[0].fileName, file(params.match_reference)])
                 .set {adjusted_concat_fasta_files}
             MATCH_REFERENCE_CONTIGS1(adjusted_concat_fasta_files)
                 .map(it -> [[fileName: it[1]], [it[0]]])

@@ -1,6 +1,5 @@
 process GENERATE_KPOPTWISTED {
     cpus = params.cpu_num
-    //conda "${moduleDir}/environment.yml"
     publishDir "${params.output_dir}/KPopTwist_files"
 
     input:
@@ -21,7 +20,6 @@ process GENERATE_KPOPTWISTED {
 
 process KPOPTWIST_UPDATE {
     cpus = params.cpu_num
-    //conda "${moduleDir}/environment.yml"
     publishDir "${params.output_dir}/updated_KPopTwist_files"
 
     input:
@@ -43,7 +41,6 @@ process KPOPTWIST_UPDATE {
 
 process UPDATE_PLOT {
     cpus = params.cpu_num
-    //conda "${moduleDir}/environment.yml"
     publishDir "${params.output_dir}/updated_KPopTwist_files"
 
     input:

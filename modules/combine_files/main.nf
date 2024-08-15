@@ -31,7 +31,7 @@ process COMBINE_FILES {
 }
 
 process COMBINE_FILES_BY_CLASS {
-    tag {"Class $meta_class"}
+    tag {"Class $meta_class.meta_class"}
     cpus = params.cpu_num
     publishDir "${params.output_dir}/modified_fasta_files"
 

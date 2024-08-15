@@ -19,6 +19,6 @@ dependencies:
   - megahit
   - flash
   - lastz
-  - seqtk
+  - seqkit
   - sra-tools >=3.1.1
 
