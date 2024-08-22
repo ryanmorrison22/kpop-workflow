@@ -132,6 +132,11 @@ if (params.classify && params.test_dir == "" && params.test_accession_list == ""
     exit 0
 }
 
+if (params.classify && params.meta_data == ""){
+    log.warn"""Each individual file in --input_dir will be treated as a class as --meta_data not specified. If you want to combine files into classes or rename classes please use --meta_data. Use --help for more information.
+    """.stripIndent()
+}
+
 if (params.input_dir != "") {
     // Channels created for all fastas, paired fastas and all paired fastqs in input_dir, error if no fasta or fastq files ound in input_dir
     FASTAS = "${params.input_dir}/*.{fasta,fa,fasta.gz,fa.gz}"
@@ -190,7 +195,6 @@ if (params.meta_data != "") {
 
     Channel
         .fromPath(params.meta_data)
-        .ifEmpty {exit 1, log.error"""Cannot find path file ${params.meta_data}"""}
         .splitCsv(header:true, sep: "\t")
         .map { row -> meta = [[fileName: row.fileName.toString().split("/")[-1]], [meta_class: row.class]] }
         .set {meta_file}
@@ -199,7 +203,7 @@ if (params.meta_data != "") {
         .map {it -> [it[2], it[1][0]]}
         .groupTuple(by: [0])
         .set {meta_fasta_files}
-}
+} 
 
 // Channels created for all fastas, paired fastas and all paired fastqs in test_dir, error if no files found in test_dir
 if (params.test_dir != "") {
@@ -325,11 +329,18 @@ workflow {
             .map(it -> [it[0], [it[1]]])
             .set {train_assembled_fastas}
         ASSEMBLY_STATS1(train_assembled_fastas)
-        train_assembled_fastas
-            .join(meta_file)
-            .map {it -> [it[2], it[1][0]]}
-            .concat(meta_fasta_files.transpose())
-            .set {concat_meta_fasta_files}
+        if (params.meta_data != "") {
+            train_assembled_fastas
+                .join(meta_file)
+                .map {it -> [it[2], it[1][0]]}
+                .concat(meta_fasta_files.transpose())
+                .set {concat_meta_fasta_files}
+        } else {
+            train_assembled_fastas
+                .concat(fasta_files)
+                .map {it -> [[meta_class: it[0].fileName], it[1][0]]}
+                .set {concat_meta_fasta_files}
+        }
         if (params.match_reference != "") {
             concat_meta_fasta_files
                 .map(it -> [it[1], "${it[0].meta_class}_${it[1].getBaseName(file(it[1]).name.endsWith('.gz')? 2: 1)}", file(params.match_reference)])
