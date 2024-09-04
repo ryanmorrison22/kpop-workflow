@@ -6,14 +6,15 @@ process GENERATE_KPOPTWISTED {
     tuple path(counter_file), val(prefix), path(twister_file), path(twisted_file)
  
     output:
-    tuple path("temp.KPopTwisted"), val(prefix), path(twister_file), path(twisted_file)
+    tuple path("*.KPopTwisted"), val(prefix), path(twister_file), path(twisted_file)
 
     script:
         def args = task.ext.args ?: ''
         """
         twister_prefix=\$(echo $twister_file | sed 's/.KPopTwister//')
-        KPopCountDB -i $prefix -t updating
-        for i in \$(seq 2 \$(awk '{print NF; exit}' updating.KPopCounter.txt)) ; do cut -f1,\${i} updating.KPopCounter.txt ; done | KPopTwistDB -i T \$twister_prefix -k /dev/stdin -o t temp -v
+        counter_prefix=\$(echo $counter_file | sed 's/.KPopCounter//')
+        KPopCountDB -i \$counter_prefix -t updating
+        for i in \$(seq 2 \$(awk '{print NF; exit}' updating.KPopCounter.txt)) ; do cut -f1,\${i} updating.KPopCounter.txt ; done | KPopTwistDB -i T \$twister_prefix -k /dev/stdin -o t $prefix -v
         rm updating.KPopCounter.txt
         """
 }

@@ -33,10 +33,10 @@ if [[ "$TWISTER" == "" || "$TWISTED" == "" ]]; then
 fi
 
 KPopTwistDB -i t "$TWISTED" -O t "$TWISTED" -v
-KPopTwistDB -i T "$TWISTER" -m "powers(1,1,"$POWER")" -O T "$TWISTER" -O m "${TWISTER}.powx" -v
+KPopTwistDB -i T "$TWISTER" -m "powers(1,1,"$POWER")" -O T "$TWISTED" -O m "${TWISTED}.powx" -v
 # We only need the inertias, not the twister itself
-rm -f "${TWISTER}.KPopTwister.txt"
-KPopTwistDB -i T "$TWISTER" -O m "${TWISTER}.sigm" -v
+rm -f "${TWISTED}.KPopTwister.txt"
+KPopTwistDB -i T "$TWISTER" -O m "${TWISTED}.sigm" -v
 
 Rscript --vanilla <(
 cat <<'_____'
@@ -78,9 +78,9 @@ cat <<'_____'
   coords<-read.table(paste0(args[2],".KPopTwisted.txt"),header=TRUE,row.names=1,sep="\t")
   coords<-as.data.frame(coords)
   t_coords<-t(coords)
-  vars<-read.table(paste0(args[1],".KPopInertia.txt"),header=TRUE,row.names=1,sep="\t")
-  metr_powx<-read.table(paste0(args[1],".powx.KPopMetrics.txt"),header=TRUE,row.names=1,sep="\t")
-  metr_sigm<-read.table(paste0(args[1],".sigm.KPopMetrics.txt"),header=TRUE,row.names=1,sep="\t")
+  vars<-read.table(paste0(args[6],".KPopInertia.txt"),header=TRUE,row.names=1,sep="\t")
+  metr_powx<-read.table(paste0(args[6],".powx.KPopMetrics.txt"),header=TRUE,row.names=1,sep="\t")
+  metr_sigm<-read.table(paste0(args[6],".sigm.KPopMetrics.txt"),header=TRUE,row.names=1,sep="\t")
 
   weights<-sqrt(metr_powx) #*metr_sigm)
 

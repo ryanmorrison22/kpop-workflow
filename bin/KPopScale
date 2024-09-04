@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+
+### This script generates embeddings/vectors from KPopTwisted/Twister files
+set -e
+
+ 
+
+TWISTER="$1"
+
+TWISTED="$2"
+
+RESCALED="$3"
+
+POWER="$4"
+
+if [[ "$POWER" == "" ]]; then
+
+  POWER="2"
+
+fi
+
+ 
+
+if [[ "$TWISTER" == "" || "$TWISTED" == "" || "$RESCALED" == "" ]]; then
+
+  echo "This is the KPopScale program (version 0.2)"
+
+  echo " (c) 2024 Paolo Ribeca, paolo.ribeca@gmail.com"
+
+  echo "Usage: <twister> <twisted> <scaled_output_prefix> [<power>]"
+
+  exit 1
+
+fi
+
+ 
+
+TMPDIR=$(mktemp -d -p . KPopScale-XXXXXXXXXX)
+
+ 
+
+KPopTwistDB -i t "$TWISTED" -O t "${TMPDIR}/TWISTED" -v
+
+KPopTwistDB -i T "$TWISTER" -O m "${TMPDIR}/METRICS" -v
+
+ 
+
+export R_DATATABLE_NUM_PROCS_PERCENT=100
+
+ 
+
+Rscript --vanilla <(
+
+cat <<'_____'
+
+ 
+
+  library(data.table)
+
+ 
+
+  args<-commandArgs(trailingOnly=TRUE)
+
+ 
+
+  coords<-data.table::fread(paste0(args[2],".KPopTwisted.txt"),header=TRUE,sep="\t")
+
+ 
+
+  row.names<-unlist(coords[,1])
+
+  coords<-coords[,-1]
+
+ 
+
+  inertia<-read.table(paste0(args[1],".KPopMetrics.txt"),header=TRUE,row.names=1,sep="\t")
+
+  weights<-inertia^(1./as.numeric(args[4]))
+
+ 
+
+  coords<-coords[,Map("*",.SD,as.data.table(weights))]
+
+ 
+
+  rownames(coords)<-row.names
+
+  data.table::fwrite(coords,paste0(args[3],".embedding.txt"),row.names=TRUE,quote=TRUE,sep="\t",buffMB=64)
+
+ 
+
+_____
+
+) "${TMPDIR}/METRICS" "${TMPDIR}/TWISTED" "$RESCALED" "$POWER"
+
+ 
+
+rm "${TMPDIR}/METRICS.KPopMetrics.txt" "${TMPDIR}/TWISTED.KPopTwisted.txt"
+
+rmdir "${TMPDIR}"

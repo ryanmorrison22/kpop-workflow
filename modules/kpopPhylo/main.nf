@@ -20,9 +20,11 @@ process KPOPPHYLO {
     script:
         def args = task.ext.args ?: ''
         """
+        twister_prefix=\$(echo $twister_file | sed 's/.KPopTwister//')
+        twisted_prefix=\$(echo $twisted_file | sed 's/.KPopTwisted//')
         $projectDir/bin/KPopPhylo \\
-        $prefix \\
-        $prefix \\
+        \$twister_prefix \\
+        \$twisted_prefix \\
         ${params.kpopphylo_power} \\
         ${params.kpopphylo_distance} \\
         ${params.kpopphylo_magic} \\

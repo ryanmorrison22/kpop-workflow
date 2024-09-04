@@ -2,10 +2,10 @@ process KPOPCOUNT_BY_CLASS {
     publishDir "${params.output_dir}/kmer_counts"
 
     input:
-    path(fasta_list)
+    tuple path(fasta_list), val(prefix)
  
     output:
-    path("train.KPopCounter")
+    path("*.KPopCounter")
 
     script:
         def args = task.ext.args ?: ''
@@ -15,7 +15,7 @@ process KPOPCOUNT_BY_CLASS {
             class_name=\$(basename \$file _modified.fasta.gz)
             KPopCount -l \$class_name -f <(gzip -c -d \$file) -k ${params.kmer_len} $args | \\
                 KPopCountDB -k /dev/stdin -R "~." -A "\$class_name" -L "\$class_name" -N -D -t /dev/stdout 2> /dev/null
-        done | KPopCountDB -k /dev/stdin -o train -v $args2
+        done | KPopCountDB -k /dev/stdin -o $prefix -v $args2
         """
 }
 

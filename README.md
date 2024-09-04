@@ -62,6 +62,7 @@ All workflows create lots of files, but the most important outputs are the datab
 |-|-|-|-|
 | `--kmer_len` | _positive\_integer_ | Length of k-mer to use when generating spectra | <ins>default=_12_</ins> |
 | `--cpu_num` | _positive\_integer_ | Number of CPUs used per process | <ins>default=_8_</ins> |
+| `--dim_size` | _positive\_integer_ | Number of dimensions used to separate data. Choosing 0 uses all available dimensions, which will be one less than the number of samples for `--cluster` or one less than the number of classes if `--classify`. A lower number will reduce memory usage. Must not be a number above the maximum. | <ins>default=_0_</ins> |
 | `-profile` | _conda_ | Install the required conda environment automatically from the environment.yml file found in the same directory as main.nf. Slower than installing it manually. |  |
 | `--help` |  | Print help instructions |  |
 
@@ -74,7 +75,7 @@ All workflows create lots of files, but the most important outputs are the datab
 | `--flash_minOverlap` | _positive\_integer_ | The minimum required overlap length between two reads to provide a confident overlap. Only used on fastq inputs. | <ins>default=_20_</ins> |
 | `--flash_maxOverlap` | _positive\_integer_ | Maximum overlap length expected in approximately 90% of read pairs. Only used on fastq inputs. | <ins>default=_1000_</ins> |
 | `--extra_megahit` | _string_ | Any additional arguments for Megahit (https://pubmed.ncbi.nlm.nih.gov/25609793/). E.g. `--extra_megahit '--k-min 25'` |  |
-| `--extra_kpopCount` | _string_ | Any additional arguments for KPopCount ((https://www.biorxiv.org/content/10.1101/2022.06.22.497172v2). |  |
+| `--extra_kpopCount` | _string_ | Any additional arguments for KPopCount (https://www.biorxiv.org/content/10.1101/2022.06.22.497172v2). |  |
 | `--extra_kpopCountDB` | _string_ | Any additional arguments for KPopCountDB. |  |
 | `--extra_kpopTwist` | _string_ | Any additional arguments for KPopTwist. |  |
 | `--extra_kpopTwistDB` | _string_ | Any additional arguments for KPopTwistDB. |  |
