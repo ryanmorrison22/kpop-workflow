@@ -14,7 +14,8 @@ process COMBINE_FILES {
         """
         baseName=\$(basename $fasta_file | \\
         sed 's/\\(.*\\).fasta.*/\\1/' | \\
-        sed 's/\\(.*\\).fa.*/\\1/')
+        sed 's/\\(.*\\).fa.*/\\1/' | \\
+        sed 's/_matched//g')
         echo ">\$baseName" >> \${baseName}_modified.fasta
         if [ "$is_compressed" == "true" ]; then
             gzip -c -d $fasta_file | \\

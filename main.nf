@@ -159,7 +159,7 @@ if (params.input_dir != "") {
 
     Channel
         .fromPath( FASTAS )
-        .map { it -> [[fileName: it.toString().split("/")[-1]], [file(it)]]}
+        .map { it -> [[fileName: it.toString().split("/")[-1]], file(it)]}
         .set {fasta_files}
 
     Channel
@@ -169,7 +169,7 @@ if (params.input_dir != "") {
 
     Channel
         .fromPath( FASTQS )
-        .map { it -> [[fileName: it.toString().split("/")[-1]], [file(it)]]}
+        .map { it -> [[fileName: it.toString().split("/")[-1]], file(it)]}
         .filter { !(it.fileName =~ /(R1|R2)/) }
         .concat(paired_fastq_files)
         .set {fastq_files}
@@ -215,7 +215,7 @@ if (params.meta_data != "") {
         .set {meta_file}
     fasta_files
         .join(meta_file)
-        .map {it -> [it[2], it[1][0]]}
+        .map {it -> [it[2], it[1]]}
         .groupTuple(by: [0])
         .set {meta_fasta_files}
 } 
@@ -234,7 +234,7 @@ if (params.test_dir != "") {
 
     Channel
     .fromPath( TEST_FASTAS )
-    .map { it -> [[fileName: it.toString().split("/")[-1]], [file(it)]]}
+    .map { it -> [[fileName: it.toString().split("/")[-1]], file(it)]}
     .set {test_fasta_files}
 
     Channel
@@ -244,7 +244,7 @@ if (params.test_dir != "") {
 
     Channel
     .fromPath( TEST_FASTQS )
-    .map { it -> [[fileName: it.toString().split("/")[-1]], [file(it)]]}
+    .map { it -> [[fileName: it.toString().split("/")[-1]], file(it)]}
     .filter { !(it.fileName =~ /(R1|R2)/) }
     .concat(test_paired_fastq_files)
     .set {test_fastq_files}
@@ -305,7 +305,7 @@ workflow {
 
     /// Assemble Reads
     ASSEMBLE_FASTQS1(fastq_files)
-        .map(it -> [it[0], [it[1]]])
+        .map(it -> [it[0], it[1]])
         .set {assembled_fastas}
     ASSEMBLY_STATS1(assembled_fastas)
 
@@ -317,7 +317,11 @@ workflow {
         // Only use sequences that match with reference if reference provided
         if (params.match_reference != "") {
             concat_fasta_files
-                .map(it -> [it[1], it[0].fileName.toString().split("/")[-1].replace(".fasta.gz", "").replace(".fasta", "").replace(".fa.gz", "").replace(".fa", ""), file(params.match_reference)])
+                .map(it -> [it[1], it[0].fileName.toString().split("/")[-1]
+                .replace(".fasta.gz", "").replace(".fastq.gz", "")
+                .replace(".fasta", "").replace(".fastq", "")
+                .replace(".fa.gz", "").replace(".fq.gz", "")
+                .replace(".fa", "").replace(".fq", ""), file(params.match_reference)])
                 .set {adjusted_concat_fasta_files}
             MATCH_REFERENCE_CONTIGS1(adjusted_concat_fasta_files)
                 .map(it -> [[fileName: it[1]], it[0]])
@@ -361,7 +365,7 @@ workflow {
                 .map { row -> meta = [[fileName: row.fileName.toString().split("/")[-1]], [meta_class: row.class]] }
                 .set {cluster_meta_file}
             concat_fasta_files
-                .map( it -> [[fileName: it[1].toString().split("/")[-1].replace(".fasta.gz", "").replace(".fasta", "").replace(".fa.gz", "").replace(".fa", "")], it[1]])
+                .map( it -> [[fileName: it[1].toString().split("/")[-1].replace(".fasta.gz", "").replace(".fasta", "").replace(".fa.gz", "").replace(".fa", "").replace("_matched", "")], it[1]])
                 .join(cluster_meta_file, by: [0])
                 .map {it -> [it[2], it[1]]}
                 .groupTuple(by: [0])
@@ -408,13 +412,13 @@ workflow {
         if (params.meta_data != "") {
             assembled_fastas
                 .join(meta_file)
-                .map {it -> [it[2], it[1][0]]}
+                .map {it -> [it[2], it[1]]}
                 .concat(meta_fasta_files.transpose())
                 .set {concat_meta_fasta_files}
         } else {
             assembled_fastas
                 .concat(fasta_files)
-                .map {it -> [[meta_class: it[0].fileName], it[1][0]]}
+                .map {it -> [[meta_class: it[0].fileName], it[1]]}
                 .set {concat_meta_fasta_files}
         }
 
