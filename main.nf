@@ -8,6 +8,8 @@ include { KPOPCOUNT as KPOPCOUNT1 } from './modules/kpopCount'
 include { KPOPCOUNT as KPOPCOUNT2 } from './modules/kpopCount'
 include { KPOPCOUNT_BY_CLASS as KPOPCOUNT_BY_CLASS1 } from './modules/kpopCount'
 include { KPOPCOUNT_BY_CLASS as KPOPCOUNT_BY_CLASS2 } from './modules/kpopCount'
+include { KPOPCOUNT_READS as KPOPCOUNT_READS1 } from './modules/kpopCount'
+include { KPOPCOUNT_READS as KPOPCOUNT_READS2 } from './modules/kpopCount'
 include { GENERATE_TEST_TWISTED } from './modules/generate_test_twisted'
 include { KPOPPHYLO } from './modules/kpopPhylo'
 include { KPOPTWIST as KPOPTWIST1 } from './modules/kpopTwist'
@@ -67,6 +69,7 @@ Optional arguments:
         --kmer_len                          Length of k-mer to use when generating spectra [12] 
         --output_dir                        Path to output directory. If directory doesn't exist then a new directory will be created. [projectDir/results]
         --output_prefix                     Prefix for output files [output]
+        --no_assembly                       Do not perform assembly on the reads, the workflow will count the number of kmers from the raw reads directly instead of assemblies
         --cpu_num                           Number of CPUs used per process [8] 
         --meta_data                         Tsv file with two required columns with defined headers; "fileName" and "class". \
                                             "fileName" is file name if a fasta or fasta.gz file, or file prefix if paired-end fastqs. E.g. sample1.fasta.gz if fasta file or \
@@ -303,11 +306,15 @@ workflow {
     TEST_FASTA_VALIDATION(test_fasta_files)
         .set {test_fasta_files}
 
-    /// Assemble Reads
-    ASSEMBLE_FASTQS1(fastq_files)
-        .map(it -> [it[0], it[1]])
-        .set {assembled_fastas}
-    ASSEMBLY_STATS1(assembled_fastas)
+    /// Either assemble the reads (default) or use fastqs if '--no_assembly' is false
+    if (params.no_assembly) {
+        assembled_fastas = fastq_files
+    } else {
+        ASSEMBLE_FASTQS1(fastq_files)
+            .map(it -> [it[0], it[1]])
+            .set {assembled_fastas}
+        ASSEMBLY_STATS1(assembled_fastas)
+    }
 
     /// Clustering workflow
     if (params.cluster) {
@@ -323,21 +330,38 @@ workflow {
                 .replace(".fa.gz", "").replace(".fq.gz", "")
                 .replace(".fa", "").replace(".fq", ""), file(params.match_reference)])
                 .set {adjusted_concat_fasta_files}
-            MATCH_REFERENCE_CONTIGS1(adjusted_concat_fasta_files)
-                .map(it -> [[fileName: it[1]], it[0]])
-                .set {concat_fasta_files}
+            if (params.no_assembly) {
+                ////TO DO: NEED TO ADD MAPPING STEP FOR ONLY READS
+            } else {
+                MATCH_REFERENCE_CONTIGS1(adjusted_concat_fasta_files)
+                    .map(it -> [[fileName: it[1]], it[0]])
+                    .set {concat_fasta_files}
+            }
         }
 
         // Determine number of dimensions
-        COMBINE_FILES1(concat_fasta_files)
-            .collectFile(name: "${params.output_dir}/modified_fasta_files/${params.output_prefix}_combined.fasta.gz", newLine: false)
-            .map(it -> [it, params.output_prefix])
-            .set {combined_fasta}
-        KPOPCOUNT1(combined_fasta)
-            .map(it -> [it, params.output_prefix])
-            .set {kpopcount_file}
+        if (params.no_assembly) { // If starting from reads
+            concat_fasta_files
+                .map(it -> it[1].toString().replace(", ", "?")) //Need to replace the ", " with something unique so we can separate the files in KPOPCOUNT_READS 
+                .toSortedList()
+                .map(it -> [it, params.output_prefix])
+                .set {fastq_list}
+            KPOPCOUNT_READS1(fastq_list)
+                .map(it -> [it, params.output_prefix])
+                .set {kpopcount_file}
+        } else {
+            COMBINE_FILES1(concat_fasta_files)
+                .collectFile(name: "${params.output_dir}/modified_fasta_files/${params.output_prefix}_combined.fasta.gz", newLine: false)
+                .map(it -> [it, params.output_prefix])
+                .set {combined_fasta}
+            KPOPCOUNT1(combined_fasta)
+                .map(it -> [it, params.output_prefix])
+                .set {kpopcount_file}
+        }
 
         if (params.dim_size != 0) { // If the dimension size is specified, else run all dimensions available
+
+            ////TO DO: NEED TO ALLOW FOR ONLY READS WHEN PERFOMING DIMENSION REDUCTION
 
             // Generate KPopCounts and KPopTwister for the number of dimensions
             concat_fasta_files
@@ -407,6 +431,8 @@ workflow {
 
     /// Classification workflow
     if (params.classify) {
+
+        //TO DO: ALLOW USE OF READS INSTEAD OF ASSEMBLING
 
         // Linking data to supplied metadata file if available, if not then each sample is treated as own class
         if (params.meta_data != "") {
