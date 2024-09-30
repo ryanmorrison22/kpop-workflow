@@ -66,9 +66,9 @@ process KPOPCOUNT_READS {
                 R2=\$(echo \$file | cut -d"?" -f2)
                 baseName=\$(basename \$R1 | \\
                     sed 's/\\(.*\\).fastq.*/\\1/' | \\
-                    sed 's/\\(.*\\).fq.*/\\1/' \\
-                    sed 's/_R1//g' \\
-                    sed 's/.R1//g' \\
+                    sed 's/\\(.*\\).fq.*/\\1/' | \\
+                    sed 's/_R1//g' | \\
+                    sed 's/.R1//g' | \\
                     sed 's/-R1//g')
                 \$open_file \$R1 \$R2 | KPopCount -l \$baseName -s /dev/stdin -k ${params.kmer_len} $args | \\
                 KPopCountDB -k /dev/stdin -R "~." -A "\$baseName" -L "\$baseName" -N -D -t /dev/stdout 2> /dev/null
@@ -78,9 +78,9 @@ process KPOPCOUNT_READS {
                 R2=\$(echo \$file | cut -d"?" -f3)
                 baseName=\$(basename \$R1 | \\
                     sed 's/\\(.*\\).fastq.*/\\1/' | \\
-                    sed 's/\\(.*\\).fq.*/\\1/' \\
-                    sed 's/_R1//g' \\
-                    sed 's/.R1//g' \\
+                    sed 's/\\(.*\\).fq.*/\\1/' | \\
+                    sed 's/_R1//g' | \\
+                    sed 's/.R1//g' | \\
                     sed 's/-R1//g')
                 \$open_file \$R1 \$R2 \$unmated | KPopCount -l \$baseName -s /dev/stdin -k ${params.kmer_len} $args | \\
                 KPopCountDB -k /dev/stdin -R "~." -A "\$baseName" -L "\$baseName" -N -D -t /dev/stdout 2> /dev/null
