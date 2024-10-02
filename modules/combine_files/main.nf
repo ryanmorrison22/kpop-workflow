@@ -31,7 +31,7 @@ process COMBINE_FILES {
         """
 }
 
-process COMBINE_FILES_BY_CLASS {
+process COMBINE_FASTAS_BY_CLASS {
     tag {"Class $meta_class.meta_class"}
     cpus = params.cpu_num
     publishDir "${params.output_dir}/modified_fasta_files"
@@ -57,5 +57,31 @@ process COMBINE_FILES_BY_CLASS {
             fi
         done
         gzip class_${meta_class.meta_class}_modified.fasta
+        """
+}
+
+process COMBINE_FASTQS_BY_CLASS {
+    tag {"Class $meta_class.meta_class"}
+    cpus = params.cpu_num
+    publishDir "${params.output_dir}/modified_fastq_files"
+
+    input:
+    tuple val(meta_class), val(fastqs)
+ 
+    output:
+    path("*modified.fastq.gz")
+
+    script:
+        """
+        files=\$(echo $fastqs | sed 's/\\[//g' | sed 's/\\]//g' | sed 's/,//g')
+        for fileNames in \$files ; do
+            file=\$(echo \$fileNames | sed 's/\\[//g' | sed 's/\\]//g' | sed 's/,//g')
+            if [[ \$file = *.gz ]]; then
+                gzip -c -d \$file >> class_${meta_class.meta_class}_modified.fastq
+            else 
+                cat \$file >> class_${meta_class.meta_class}_modified.fastq
+            fi
+        done
+        gzip class_${meta_class.meta_class}_modified.fastq
         """
 }

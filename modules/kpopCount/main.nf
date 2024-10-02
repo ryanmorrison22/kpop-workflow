@@ -94,3 +94,24 @@ process KPOPCOUNT_READS {
         done | KPopCountDB -k /dev/stdin -o $prefix -v $args2
         """
 }
+
+process KPOPCOUNT_READS_BY_CLASS {
+    publishDir "${params.output_dir}/kmer_counts"
+
+    input:
+    tuple path(fastq_list), val(prefix)
+ 
+    output:
+    path("*.KPopCounter")
+
+    script:
+        def args = task.ext.args ?: ''
+        def args2 = task.ext.args2 ?: ''
+        """
+        for file in $fastq_list ; do
+            class_name=\$(basename \$file _modified.fastq.gz)
+            KPopCount -l \$class_name -s <(gzip -c -d \$file) -k ${params.kmer_len} $args | \\
+                KPopCountDB -k /dev/stdin -R "~." -A "\$class_name" -L "\$class_name" -N -D -t /dev/stdout 2> /dev/null
+        done | KPopCountDB -k /dev/stdin -o $prefix -v $args2
+        """
+}
