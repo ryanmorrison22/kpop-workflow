@@ -63,7 +63,7 @@ All workflows create lots of files, but the most important outputs are the datab
 | `--kmer_len` | _positive\_integer_ | Length of k-mer to use when generating spectra | <ins>default=_12_</ins> |
 | `--cpu_num` | _positive\_integer_ | Number of CPUs used per process | <ins>default=_8_</ins> |
 | `--no_assembly` |  | Do not perform assembly on the reads, the workflow will count the number of kmers from the raw reads directly instead of assemblies |  |
-| `--dim_size` | _positive\_integer_ | Number of dimensions used to separate data. Choosing 0 uses all available dimensions, which will be one less than the number of samples for `--cluster` or one less than the number of classes if `--classify`. A lower number will reduce memory usage. Must not be a number above the maximum. | <ins>default=_0_</ins> |
+| `--max_dim` | _positive\_integer_ | Maximum number of dimensions used to separate data. Choosing 0 uses all available dimensions, which will be one less than the number of samples for `--cluster` or one less than the number of classes if `--classify`. A lower number will reduce memory usage. If the data cannot be separated into the number chosen, less dimensions will be chosen automatically. Must not be a number above the maximum number of samples. | <ins>default=_0_</ins> |
 | `-profile` | _conda_ | Install the required conda environment automatically from the environment.yml file found in the same directory as main.nf. Slower than installing it manually. |  |
 | `--help` |  | Print help instructions |  |
 
