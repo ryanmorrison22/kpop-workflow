@@ -13,7 +13,8 @@ process GENERATE_TEST_TWISTED {
         def args = task.ext.args ?: ''
         def args2 = task.ext.args2 ?: ''
         """
+        twister_prefix=\$(echo $train_twister | sed 's/.KPopTwister//')
         KPopCount -L -f <(gzip -c -d $test_fasta) -k ${params.kmer_len} $args | \\
-            KPopTwistDB -i T train -k /dev/stdin -o t test $args2
+            KPopTwistDB -i T \$twister_prefix -k /dev/stdin -o t test $args2
         """    
 }

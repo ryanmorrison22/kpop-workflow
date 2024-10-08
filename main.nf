@@ -3,7 +3,8 @@
 // Call processes from modules directory 
 include { COMBINE_FILES as COMBINE_FILES1 } from './modules/combine_files'
 include { COMBINE_FILES as COMBINE_FILES2 } from './modules/combine_files'
-include { COMBINE_FASTAS_BY_CLASS } from './modules/combine_files'
+include { COMBINE_FASTAS_BY_CLASS as COMBINE_FASTAS_BY_CLASS1 } from './modules/combine_files'
+include { COMBINE_FASTAS_BY_CLASS as COMBINE_FASTAS_BY_CLASS2 } from './modules/combine_files'
 include { COMBINE_FASTQS_BY_CLASS } from './modules/combine_files'
 include { KPOPCOUNT as KPOPCOUNT1 } from './modules/kpopCount'
 include { KPOPCOUNT as KPOPCOUNT2 } from './modules/kpopCount'
@@ -77,8 +78,9 @@ Optional arguments:
                                             "fileName" is file name if a fasta or fasta.gz file, or file prefix if paired-end fastqs. E.g. sample1.fasta.gz if fasta file or \
                                             sample1 if sample1_R1.fastq.gz and sample1_R2.fastq.gz. Additional columns allowed
         --match_reference                   Full path to reference fasta file, used to select contigs that only match the supplied reference
-        --dim_size                          Number of dimensions used to separate data. Choosing 0 uses all available dimensions, which will be one less than the number of samples \
-                                            for --cluster or one less than the number of classes if --classify. A lower number will reduce memory usage. Must not be a number above the maximum [0]
+        --max_dim                           Maximum number of dimensions used to separate data. Choosing 0 uses all available dimensions, which will be one less than the number of samples \
+                                            for --cluster or one less than the number of classes if --classify. A lower number will reduce memory usage. \
+                                            If the data cannot be separated into the number chosen, less dimensions will be chosen automatically. Must not be a number above the maximum [0]
         --min_contig_match_len              Minimum number of query contig base pairs that match the reference. Only used with --match_reference option [250]
         --min_contig_match_proportion       Minimum fraction of query contig base pairs that match reference. Only used with --match_reference option [0.6]
         --pred_class_num                    Specify the top n number of best predictions to be included in .KPopSummary file. E.g. 2 would choose the top two closest classes [all]
@@ -361,14 +363,12 @@ workflow {
                 .set {kpopcount_file}
         }
 
-        if (params.dim_size != 0) { // If the dimension size is specified, else run all dimensions available
-
-            ////TO DO: NEED TO ALLOW FOR ONLY READS WHEN PERFOMING DIMENSION REDUCTION
+        if (params.max_dim != 0) { // If the dimension size is specified, else run all dimensions available
 
             // Generate KPopCounts and KPopTwister for the number of dimensions
             if (params.no_assembly) { // If starting from reads - NEED TO IMPLEMENT PAIRED
                 fastq_files
-                    | randomSample( params.dim_size+1, 1) 
+                    | randomSample( params.max_dim+1, 1) 
                     | map(it -> it[1].toString().replace(", ", "?")) //Need to replace the ", " with something unique so we can separate the files in KPOPCOUNT_READS 
                     | toSortedList
                     | map(it -> [it, "reduced_dim"])
@@ -416,7 +416,7 @@ workflow {
 
             } else {
                 concat_fasta_files
-                    | randomSample( params.dim_size+1, 1) 
+                    | randomSample( params.max_dim+1, 1) 
                     | COMBINE_FILES2
                     | collectFile(name: "${params.output_dir}/modified_fasta_files/reduced_dim_combined.fasta.gz", newLine: false)
                     | map(it -> [it, "reduced_dim"])
@@ -452,7 +452,7 @@ workflow {
                     .groupTuple(by: [0])
                     .set {cluster_meta_fasta_files}
                 
-                cluster_fasta_list = COMBINE_FASTAS_BY_CLASS(cluster_meta_fasta_files)
+                cluster_fasta_list = COMBINE_FASTAS_BY_CLASS1(cluster_meta_fasta_files)
                     .toSortedList()
                     .map( it -> [it, "clustered"])
                 
@@ -492,7 +492,7 @@ workflow {
     /// Classification workflow
     if (params.classify) {
 
-        //TO DO: ALLOW USE OF READS INSTEAD OF ASSEMBLING
+        //TO DO: USE READS THAT MAP ONLY TO A REFERENCE
 
         // Linking data to supplied metadata file if available, if not then each sample is treated as own class
         if (params.meta_data != "") {
@@ -518,20 +518,6 @@ workflow {
                 .set {concat_meta_fasta_files}
         }
 
-        // Combine, count kmers and twist training data
-        concat_meta_fasta_files
-            .groupTuple(by: [0])
-            .set {assembled_meta_fasta_files}
-        train_fasta_list = COMBINE_FASTAS_BY_CLASS(assembled_meta_fasta_files)
-            .toSortedList()
-            .map( it -> [it, "train"])
-        KPOPCOUNT_BY_CLASS1(train_fasta_list)
-            .map(it -> [it, "train"])
-            .set {train_kpopcount_file}
-        KPOPTWIST1(train_kpopcount_file)
-            .map(it -> [it, "train"])
-            .set {train_kpoptwist_files}
-
         // Assemble test samples, calculate assembly stats and combine all files 
         ASSEMBLE_FASTQS2(test_fastq_files)
             .set {test_assembled_fastas}
@@ -552,6 +538,80 @@ workflow {
                 .set {test_combined_fasta}
         }
 
+        // Combine and count kmers training data
+        concat_meta_fasta_files
+            .groupTuple(by: [0])
+            .set {assembled_meta_fasta_files}
+        train_fasta_list = COMBINE_FASTAS_BY_CLASS1(assembled_meta_fasta_files)
+            .toSortedList()
+            .map( it -> [it, "train"])
+        KPOPCOUNT_BY_CLASS1(train_fasta_list)
+            .map(it -> [it, "train"])
+            .set {train_kpopcount_file}
+
+        if (params.max_dim != 0) { // If the dimension size is specified, else run all dimensions available
+            concat_meta_fasta_files
+                | randomSample( params.max_dim+1, 1) 
+                | map(it -> [[fileName: it[1].toString().split("/")[-1]], it[1]])
+                | COMBINE_FILES2
+                | collectFile(name: "${params.output_dir}/modified_fasta_files/reduced_dim_combined.fasta.gz", newLine: false)
+                | map(it -> [it, "reduced_dim"])
+                | KPOPCOUNT2
+                | map(it -> [it, "reduced_dim"])
+                | KPOPTWIST1
+                | set {train_red_dim_kpoptwist_files}
+        
+            // Twisting all samples with reduced twister
+            GENERATE_KPOPTWISTED1(train_kpopcount_file.combine(train_red_dim_kpoptwist_files))
+                .map(it -> [it[0], "reduced_temp", it[2], it[3]])
+                .set {train_retwisted_files}
+
+            /// Create embeddings using KPopScale
+            CLUSTERING(train_retwisted_files)
+                .set {train_cluster_file}
+
+            // KPopCount per cluster
+            train_cluster_file
+                .splitCsv(header:true, sep: "\t")
+                .map { row -> meta = [[fileName: row.fileName.toString().split("/")[-1]], [meta_class: row.class]] }
+                .set {train_cluster_meta_file}
+            
+            train_fasta_list
+                .map( it -> [it[0]])
+                .flatten()
+                .map( it -> [[fileName: it.toString().split("/")[-1].replace("_modified.fasta.gz", "")], it])
+                .set {combined_class_fasta_files}
+
+            combined_class_fasta_files
+                .join(train_cluster_meta_file, by: [0])
+                .map {it -> [it[2], it[1]]}
+                .groupTuple(by: [0])
+                .set {train_cluster_meta_fasta_files}
+            
+            train_cluster_fasta_list = COMBINE_FASTAS_BY_CLASS2(train_cluster_meta_fasta_files)
+                .toSortedList()
+                .map( it -> [it, "clustered"])
+            
+            KPOPCOUNT_BY_CLASS2(train_cluster_fasta_list)
+                .map(it -> [it, "clustered"])
+                .set {train_cluster_kpopcount_file}
+
+            // Generate Twister file based on clusters
+            KPOPTWIST2(train_cluster_kpopcount_file)
+                .set {train_clustered_kpoptwist_files}
+
+            // Twist all samples using cluster twister
+            GENERATE_KPOPTWISTED2(train_kpopcount_file.combine(train_clustered_kpoptwist_files))
+                .map(it -> [[it[2], it[0]], "train"])
+                .set {train_kpoptwist_files}
+
+        } else {
+            // Twist training data
+            KPOPTWIST1(train_kpopcount_file)
+                .map(it -> [it, "train"])
+                .set {train_kpoptwist_files}
+        }
+        
         // Twist test files based on training twister and use the positional information within multidimensional space to predict classes
         train_test_files = train_kpoptwist_files
             .combine(test_combined_fasta)
@@ -561,6 +621,9 @@ workflow {
     }
 
     /// Update workflow
+
+    //TO DO: ALLOW USE OF READS INSTEAD OF ASSEMBLING
+
     if (params.update) {
         assembled_fastas.concat(fasta_files)
             .set {concat_fasta_files}
