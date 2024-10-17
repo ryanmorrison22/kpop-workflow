@@ -1,7 +1,7 @@
 
 process GENERATE_TEST_TWISTED {
     cpus = params.cpu_num
-    publishDir "${params.output_dir}/predictions"
+    publishDir "${params.output_dir}/predictions", mode: 'copy'
 
     input:
     tuple path(train_twister), path(train_twisted), path(test_fasta)

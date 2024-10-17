@@ -1,6 +1,6 @@
 process META_COLOURED_TREE {
     cpus = params.cpu_num
-    publishDir "${params.output_dir}/trees_and_metrics"
+    publishDir "${params.output_dir}/trees_and_metrics", mode: 'copy'
 
     input:
     tuple path(meta_file), path(nwk_file), val(prefix)

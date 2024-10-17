@@ -1,7 +1,7 @@
 process MATCH_REFERENCE_CONTIGS {
     tag {"Matching with $match_reference"}
     cpus = params.cpu_num
-    publishDir "${params.output_dir}/matched_contig_files"
+    publishDir "${params.output_dir}/matched_contig_files", mode: 'copy'
 
     input:
     tuple path(combined_fasta_file), val(prefix), path(match_reference)

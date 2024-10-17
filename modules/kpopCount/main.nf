@@ -1,5 +1,6 @@
 process KPOPCOUNT_BY_CLASS {
-    publishDir "${params.output_dir}/kmer_counts"
+    cpus = params.cpu_num
+    publishDir "${params.output_dir}/kmer_counts", mode: 'copy'
 
     input:
     tuple path(fasta_list), val(prefix)
@@ -21,7 +22,7 @@ process KPOPCOUNT_BY_CLASS {
 
 process KPOPCOUNT {
     cpus = params.cpu_num
-    publishDir "${params.output_dir}/kmer_counts"
+    publishDir "${params.output_dir}/kmer_counts", mode: 'copy'
 
     input:
     tuple path(combined_fasta_file), val(prefix)
@@ -41,7 +42,7 @@ process KPOPCOUNT {
 process KPOPCOUNT_READS {
     cpus = params.cpu_num
     debug true
-    publishDir "${params.output_dir}/kmer_counts"
+    publishDir "${params.output_dir}/kmer_counts", mode: 'copy'
 
     input:
     tuple val(fastq_file_list), val(prefix)
@@ -96,6 +97,7 @@ process KPOPCOUNT_READS {
 }
 
 process KPOPCOUNT_READS_BY_CLASS {
+    cpus = params.cpu_num
     publishDir "${params.output_dir}/kmer_counts"
 
     input:

@@ -1,7 +1,7 @@
 process ASSEMBLE_FASTQS {
     tag {"$fileName.fileName"}
     cpus = params.cpu_num
-    publishDir "${params.output_dir}/assemblies"
+    publishDir "${params.output_dir}/assemblies", mode: 'copy'
 
     input:
     tuple val(fileName), path(fastq_file)

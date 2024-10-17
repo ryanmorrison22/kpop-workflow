@@ -1,6 +1,6 @@
 process KPOPTWIST {
     cpus = params.cpu_num
-    publishDir "${params.output_dir}/KPopTwist_files"
+    publishDir "${params.output_dir}/KPopTwist_files", mode: 'copy'
 
     input:
     tuple path(counter_file), val(prefix)

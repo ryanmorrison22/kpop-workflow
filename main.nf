@@ -59,17 +59,18 @@ Required arguments:
         --input_dir                         Path to directory containing fasta/fastq files. Paired-end fastqs require "R1" and "R2" in filenames. \
                                             Gzipped files are allowed. \
                                             If --classify used this directory is the training dataset. \
-                                            If --update used this directory is the new dataset used to update.
-        --accession_list                    Supply a list of SRA IDs to download as input samples in the form of a text file, with one SRA per line.
-        --test_dir                          Directory containing unseen test dataset. Only required if --classify workflow invoked. 
+                                            If --update used this directory is the new dataset used to update
+        --accession_list                    Supply a list of SRA IDs to download as input samples in the form of a text file, with one SRA per line
+        --test_dir                          Directory containing unseen test dataset. Only required if --classify workflow invoked 
         --test_accession_list               Supply a list of SRA IDs to download as test samples in the form of a text file, with one SRA per line. \
-                                            Only required if --classify workflow invoked. 
-        --twisted_file                      Full path to .KPopTwisted file. Only required for --update workflow.
-        --twister_file                      Full path to .KPopTwister file. Only required for --update workflow.
+                                            Only required if --classify workflow invoked
+        --twisted_file                      Full path to .KPopTwisted file. Only required for --update workflow
+        --twister_file                      Full path to .KPopTwister file. Only required for --update workflow
 
 Optional arguments:
     General arguments
-        --kmer_len                          Length of k-mer to use when generating spectra [12] 
+        --kmer_len                          Length of k-mer to use when generating spectra. For choosing best k size for DNA we recommend using the base 4 log of the genome size. \
+                                            E.g. If the genome size is 5Mbp, then base 4 log of 5000000 is 11.13, so optimal kmer size is likely 11 or 12 [12] 
         --output_dir                        Path to output directory. If directory doesn't exist then a new directory will be created. [projectDir/results]
         --output_prefix                     Prefix for output files [output]
         --no_assembly                       Do not perform assembly on the reads, the workflow will count the number of kmers from the raw reads directly instead of assemblies
@@ -80,7 +81,7 @@ Optional arguments:
         --match_reference                   Full path to reference fasta file, used to select contigs that only match the supplied reference
         --max_dim                           Maximum number of dimensions used to separate data. Choosing 0 uses all available dimensions, which will be one less than the number of samples \
                                             for --cluster or one less than the number of classes if --classify. A lower number will reduce memory usage. \
-                                            If the data cannot be separated into the number chosen, less dimensions will be chosen automatically. Must not be a number above the maximum [0]
+                                            If the data cannot be separated into the number chosen, less dimensions will be chosen automatically. Must not be a number above the maximum number of samples [0]
         --min_contig_match_len              Minimum number of query contig base pairs that match the reference. Only used with --match_reference option [250]
         --min_contig_match_proportion       Minimum fraction of query contig base pairs that match reference. Only used with --match_reference option [0.6]
         --pred_class_num                    Specify the top n number of best predictions to be included in .KPopSummary file. E.g. 2 would choose the top two closest classes [all]
@@ -92,8 +93,8 @@ Optional arguments:
         -profile conda                      Install the required conda environment automatically from the environment.yml file found in the same directory as main.nf. Slower than installing it manually.
 
     Flash arguments (https://pubmed.ncbi.nlm.nih.gov/21903629/)
-        --flash_minOverlap                  The minimum required overlap length between two reads to provide a confident overlap. Only used on fastq inputs. [20]
-        --flash_maxOverlap                  Maximum overlap length expected in approximately 90% of read pairs. Only used on fastq inputs. [1000]
+        --flash_minOverlap                  The minimum required overlap length between two reads to provide a confident overlap. Only used on fastq inputs [20]
+        --flash_maxOverlap                  Maximum overlap length expected in approximately 90% of read pairs. Only used on fastq inputs [1000]
         --extra_flash                       Any additional arguments for flash. E.g. --extra_flash '-O -x 0.35'
 
     Megahit arguments (https://pubmed.ncbi.nlm.nih.gov/25609793/)
@@ -104,9 +105,9 @@ Optional arguments:
         --extra_kpopCountDB                 Any additional arguments for KPopCountDB. E.g. --extra_kpopCountDB
         --extra_kpopTwist                   Any additional arguments for KPopTwist. E.g. --extra_kpopTwist
         --extra_kpopTwistDB                 Any additional arguments for KPopTwistDB. E.g. --extra_kpopTwistDB
-        --kpopphylo_power                   Set the external power when computing distances. [2]
+        --kpopphylo_power                   Set the external power when computing distances [2]
         --kpopphylo_distance                Distance measure to be used. This must be one of 'euclidean', 'maximum', 'manhattan', 'canberra', 'binary' or 'minkowski'. ['euclidean']
-        --kpopphylo_magic                   Cluster-related variable (Not currently implemented). ['1.']
+        --kpopphylo_magic                   Cluster-related variable (Not currently implemented) ['1.']
         --extra_kpopPhylo                   Any additional arguments for KPopPhylo. E.g. --extra_kpopPhylo
          """
          .stripIndent()

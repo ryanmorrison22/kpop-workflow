@@ -1,7 +1,7 @@
 process COMBINE_FILES {
     tag {"$fileName.fileName"}
     cpus = params.cpu_num
-    publishDir "${params.output_dir}/modified_fasta_files"
+    publishDir "${params.output_dir}/modified_fasta_files", mode: 'copy'
 
     input:
     tuple val(fileName), path(fasta_file)
@@ -34,7 +34,7 @@ process COMBINE_FILES {
 process COMBINE_FASTAS_BY_CLASS {
     tag {"Class $meta_class.meta_class"}
     cpus = params.cpu_num
-    publishDir "${params.output_dir}/modified_fasta_files"
+    publishDir "${params.output_dir}/modified_fasta_files", mode: 'copy'
 
     input:
     tuple val(meta_class), path(fastas)
@@ -63,7 +63,7 @@ process COMBINE_FASTAS_BY_CLASS {
 process COMBINE_FASTQS_BY_CLASS {
     tag {"Class $meta_class.meta_class"}
     cpus = params.cpu_num
-    publishDir "${params.output_dir}/modified_fastq_files"
+    publishDir "${params.output_dir}/modified_fastq_files", mode: 'copy'
 
     input:
     tuple val(meta_class), val(fastqs)

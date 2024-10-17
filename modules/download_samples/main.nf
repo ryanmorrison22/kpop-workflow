@@ -1,6 +1,6 @@
 process DOWNLOAD_SRAS {
     cpus = params.cpu_num
-    publishDir "${params.output_dir}/downloaded_samples"
+    publishDir "${params.output_dir}/downloaded_samples", mode: 'copy'
 
     input:
     path(list_file)
@@ -17,7 +17,7 @@ process DOWNLOAD_SRAS {
 process FASTERQ_DUMP {
     tag {"$sra_file"}
     cpus = params.cpu_num
-    publishDir "${params.output_dir}/downloaded_samples"
+    publishDir "${params.output_dir}/downloaded_samples", mode: 'copy'
 
     input:
     path(sra_file)
