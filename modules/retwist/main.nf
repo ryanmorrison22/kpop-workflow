@@ -10,11 +10,12 @@ process GENERATE_KPOPTWISTED {
 
     script:
         def args = task.ext.args ?: ''
+        def args2 = task.ext.args2 ?: ''
         """
         twister_prefix=\$(echo $twister_file | sed 's/.KPopTwister//')
         counter_prefix=\$(echo $counter_file | sed 's/.KPopCounter//')
-        KPopCountDB -i \$counter_prefix -t updating
-        for i in \$(seq 2 \$((\$(awk '{print NF; exit}' updating.KPopCounter.txt)+1))) ; do cut -f1,\${i} updating.KPopCounter.txt ; done | KPopTwistDB -i T \$twister_prefix -k /dev/stdin -o t $prefix -v
+        KPopCountDB -i \$counter_prefix -t updating $args
+        for i in \$(seq 2 \$((\$(awk '{print NF; exit}' updating.KPopCounter.txt)+1))) ; do cut -f1,\${i} updating.KPopCounter.txt ; done | KPopTwistDB -i T \$twister_prefix -k /dev/stdin -o t $prefix -v $args2
         rm updating.KPopCounter.txt
         """
 }
@@ -35,7 +36,7 @@ process KPOPTWIST_UPDATE {
         twister_prefix=\$(echo $twister_file | sed 's/.KPopTwister//')
         twisted_prefix=\$(echo $twisted_file | sed 's/.KPopTwisted//')
         updating_prefix=\$(echo $updating_file | sed 's/.KPopTwisted//')
-        KPopTwistDB -i T \$twister_prefix -i t \$twisted_prefix -a t \$updating_prefix -o t ${prefix} 
+        KPopTwistDB -i T \$twister_prefix -i t \$twisted_prefix -a t \$updating_prefix -o t ${prefix} $args
         cp $twister_file ${prefix}.KPopTwister 
         """
 }
@@ -51,7 +52,6 @@ process UPDATE_PLOT {
     path("${prefix}_updated_comparison.pdf")
 
     script:
-        def args = task.ext.args ?: ''
         """
         twister_prefix=\$(echo $twister_file | sed 's/.KPopTwister//')
         twisted_prefix=\$(echo $twisted_file | sed 's/.KPopTwisted//')
@@ -62,22 +62,20 @@ process UPDATE_PLOT {
         $projectDir/bin/KPopPhylo \\
         \$twister_prefix  \\
         \$twisted_prefix \\
-        ${params.kpopphylo_power} \\
-        ${params.kpopphylo_distance} \\
-        ${params.kpopphylo_magic} \\
+        ${params.kpopPhylo_power} \\
+        ${params.kpopPhylo_distance} \\
+        ${params.kpopPhylo_magic} \\
         ${params.tree_type} \\
         ${params.tree_label_size} \\
-        $args
         
         $projectDir/bin/KPopPhylo \\
         \$updated_twister_prefix  \\
         \$updated_twisted_prefix \\
-        ${params.kpopphylo_power} \\
-        ${params.kpopphylo_distance} \\
-        ${params.kpopphylo_magic} \\
+        ${params.kpopPhylo_power} \\
+        ${params.kpopPhylo_distance} \\
+        ${params.kpopPhylo_magic} \\
         ${params.tree_type} \\
         ${params.tree_label_size} \\
-        $args
 
         $projectDir/bin/updated_tree.R \${twisted_prefix}.NJ.nwk \${updated_twisted_prefix}.NJ.nwk  ${prefix}_updated_comparison.pdf
         """

@@ -18,18 +18,16 @@ process KPOPPHYLO {
     path("${prefix}.distances.txt")
 
     script:
-        def args = task.ext.args ?: ''
         """
         twister_prefix=\$(echo $twister_file | sed 's/.KPopTwister//')
         twisted_prefix=\$(echo $twisted_file | sed 's/.KPopTwisted//')
         $projectDir/bin/KPopPhylo \\
         \$twister_prefix \\
         \$twisted_prefix \\
-        ${params.kpopphylo_power} \\
-        ${params.kpopphylo_distance} \\
-        ${params.kpopphylo_magic} \\
+        ${params.kpopPhylo_power} \\
+        ${params.kpopPhylo_distance} \\
+        ${params.kpopPhylo_magic} \\
         ${params.tree_type} \\
         ${params.tree_label_size} \\
-        $args
         """
 }

@@ -37,6 +37,8 @@ include { INPUT_VALIDATION as TEST_FASTA_VALIDATION } from './modules/input_vali
 include { INPUT_VALIDATION as FASTQ_VALIDATION } from './modules/input_validation'
 include { INPUT_VALIDATION as TEST_FASTQ_VALIDATION } from './modules/input_validation'
 include { CLUSTERING } from './modules/dimension_reduction'
+include { FASTQ_QC as FASTQ_QC1 } from './modules/quality_control'
+include { FASTQ_QC as FASTQ_QC2 } from './modules/quality_control'
 
 // Create a help message
 def helpMessage() {
@@ -74,6 +76,7 @@ Optional arguments:
         --output_dir                        Path to output directory. If directory doesn't exist then a new directory will be created. [projectDir/results]
         --output_prefix                     Prefix for output files [output]
         --no_assembly                       Do not perform assembly on the reads, the workflow will count the number of kmers from the raw reads directly instead of assemblies
+        --no_qc                             Do not perform quality control using trim_galore                       
         --cpu_num                           Number of CPUs used per process [8] 
         --meta_data                         Tsv file with two required columns with defined headers; "fileName" and "class". \
                                             "fileName" is file name if a fasta or fasta.gz file, or file prefix if paired-end fastqs. E.g. sample1.fasta.gz if fasta file or \
@@ -100,15 +103,22 @@ Optional arguments:
     Megahit arguments (https://pubmed.ncbi.nlm.nih.gov/25609793/)
         --extra_megahit                     Any additional arguments for Megahit. E.g. --extra_megahit '--k-min 25'
 
+    TrimGalore arguments (https://github.com/FelixKrueger/TrimGalore)
+        --extra_trimGalore                  Any additional arguments for TrimGalore. E.g. --extra_trimGalore '--quality 40'
+
+    SRA-toolkit arguments (https://github.com/ncbi/sra-tools)
+        --extra_prefetch                    Any additional arguments for fasterq-dump. E.g. --extra_prefetch '--verify'
+        --extra_fasterq_dump                Any additional arguments for fasterq-dump. E.g. --extra_fasterq_dump '--concatenate-reads'
+
     KPop arguments (https://www.biorxiv.org/content/10.1101/2022.06.22.497172v2)
         --extra_kpopCount                   Any additional arguments for KPopCount. E.g. --extra_kpopCount
         --extra_kpopCountDB                 Any additional arguments for KPopCountDB. E.g. --extra_kpopCountDB
         --extra_kpopTwist                   Any additional arguments for KPopTwist. E.g. --extra_kpopTwist
         --extra_kpopTwistDB                 Any additional arguments for KPopTwistDB. E.g. --extra_kpopTwistDB
-        --kpopphylo_power                   Set the external power when computing distances [2]
-        --kpopphylo_distance                Distance measure to be used. This must be one of 'euclidean', 'maximum', 'manhattan', 'canberra', 'binary' or 'minkowski'. ['euclidean']
-        --kpopphylo_magic                   Cluster-related variable (Not currently implemented) ['1.']
-        --extra_kpopPhylo                   Any additional arguments for KPopPhylo. E.g. --extra_kpopPhylo
+        --kpopPhylo_power                   Set the external power when computing distances [2]
+        --kpopPhylo_distance                Distance measure to be used. This must be one of 'euclidean', 'maximum', 'manhattan', 'canberra', 'binary' or 'minkowski'. ['euclidean']
+        --kpopPhylo_magic                   Cluster-related variable (Not currently implemented) ['1.'] 
+        --kpopScale_power                   Set the external power when computing distances [2]
          """
          .stripIndent()
 }
@@ -310,6 +320,14 @@ workflow {
         .set {fasta_files}
     TEST_FASTA_VALIDATION(test_fasta_files)
         .set {test_fasta_files}
+
+    if (!params.no_assembly) {
+        /// FASTQ Quality Control
+        FASTQ_QC1(fastq_files)
+            .set { fastq_files }
+        FASTQ_QC2(test_fastq_files)
+            .set { test_fastq_files }
+    }
 
     /// Either assemble the reads (default) or use fastqs if '--no_assembly' is false
     if (params.no_assembly) {

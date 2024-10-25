@@ -1,5 +1,5 @@
 # kpop-workflow
-A simplified workflow to run KPop (https://github.com/PaoloRibeca/KPop) for clustering and classification
+A simplified workflow to run KPop (https://www.biorxiv.org/content/10.1101/2022.06.22.497172v2; https://github.com/PaoloRibeca/KPop) for clustering and classification
 
 To run the workflow you'll first need to create the kpop environment using the enviroment.yml file and activate the kpop environment 
 ```
@@ -63,6 +63,7 @@ All workflows create lots of files, but the most important outputs are the datab
 | `--kmer_len` | _positive\_integer_ | Length of k-mer to use when generating spectra | <ins>default=_12_</ins> |
 | `--cpu_num` | _positive\_integer_ | Number of CPUs used per process | <ins>default=_8_</ins> |
 | `--no_assembly` |  | Do not perform assembly on the reads, the workflow will count the number of kmers from the raw reads directly instead of assemblies |  |
+| `--no_qc` |  | Do not perform quality control using trim_galore |  |    
 | `--max_dim` | _positive\_integer_ | Maximum number of dimensions used to separate data. Choosing 0 uses all available dimensions, which will be one less than the number of samples for `--cluster` or one less than the number of classes if `--classify`. A lower number will reduce memory usage. If the data cannot be separated into the number chosen, less dimensions will be chosen automatically. Must not be a number above the maximum number of samples. | <ins>default=_0_</ins> |
 | `-profile` | _conda_ | Install the required conda environment automatically from the environment.yml file found in the same directory as main.nf. Slower than installing it manually. |  |
 | `--help` |  | Print help instructions |  |
@@ -76,11 +77,14 @@ All workflows create lots of files, but the most important outputs are the datab
 | `--flash_minOverlap` | _positive\_integer_ | The minimum required overlap length between two reads to provide a confident overlap. Only used on fastq inputs. | <ins>default=_20_</ins> |
 | `--flash_maxOverlap` | _positive\_integer_ | Maximum overlap length expected in approximately 90% of read pairs. Only used on fastq inputs. | <ins>default=_1000_</ins> |
 | `--extra_megahit` | _string_ | Any additional arguments for Megahit (https://pubmed.ncbi.nlm.nih.gov/25609793/). E.g. `--extra_megahit '--k-min 25'` |  |
-| `--extra_kpopCount` | _string_ | Any additional arguments for KPopCount (https://www.biorxiv.org/content/10.1101/2022.06.22.497172v2). |  |
-| `--extra_kpopCountDB` | _string_ | Any additional arguments for KPopCountDB. |  |
-| `--extra_kpopTwist` | _string_ | Any additional arguments for KPopTwist. |  |
-| `--extra_kpopTwistDB` | _string_ | Any additional arguments for KPopTwistDB. |  |
-| `--kpopphylo_power` | _positive\_integer_ | Set the external power when computing distances. | <ins>default=_2_</ins> |
-| `--kpopphylo_distance` | _string_ | Distance measure to be used. This must be one of 'euclidean', 'maximum', 'manhattan', 'canberra', 'binary' or 'minkowski'. | <ins>default=_euclidean_</ins> |
-| `--kpopphylo_magic` | _string_ | Cluster-related variable (Not currently implemented). | <ins>default=_1._</ins> |
-| `--extra_kpopPhylo` | _string_ | Any additional arguments for KPopPhylo. |  |
+| `--extra_trimGalore` | _string_ | Any additional arguments for TrimGalore (https://github.com/FelixKrueger/TrimGalore). |  |
+| `--extra_prefetch` | _string_ | Any additional arguments for prefetch (https://github.com/ncbi/sra-tools). |  |
+| `--extra_fasterq_dump` | _string_ | Any additional arguments for fasterq-dump (https://github.com/ncbi/sra-tools).
+| `--extra_kpopCount` | _string_ | Any additional arguments for KPopCount (https://github.com/PaoloRibeca/KPop?tab=readme-ov-file#41-kpopcount). |  |
+| `--extra_kpopCountDB` | _string_ | Any additional arguments for KPopCountDB (https://github.com/PaoloRibeca/KPop?tab=readme-ov-file#42-kpopcountdb). |  |
+| `--extra_kpopTwist` | _string_ | Any additional arguments for KPopTwist (https://github.com/PaoloRibeca/KPop?tab=readme-ov-file#43-kpoptwist). |  |
+| `--extra_kpopTwistDB` | _string_ | Any additional arguments for KPopTwistDB (https://github.com/PaoloRibeca/KPop?tab=readme-ov-file#44-kpoptwistdb). |  |
+| `--kpopPhylo_power` | _positive\_integer_ | Set the external power when computing distances. | <ins>default=_2_</ins> |
+| `--kpopPhylo_distance` | _string_ | Distance measure to be used. This must be one of 'euclidean', 'maximum', 'manhattan', 'canberra', 'binary' or 'minkowski'. | <ins>default=_euclidean_</ins> |
+| `--kpopPhylo_magic` | _string_ | Cluster-related variable (Not currently implemented). | <ins>default=_1._</ins> |
+| `--kpopScale_power` | _string_ | Set the external power when computing distances. | <ins>default=_2_</ins> |

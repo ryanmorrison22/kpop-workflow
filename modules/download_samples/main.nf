@@ -9,8 +9,9 @@ process DOWNLOAD_SRAS {
     path("*/*.sra")
 
     script:
+        def args = task.ext.args ?: ''
         """
-        prefetch --option-file $list_file
+        prefetch --option-file $list_file $args
         """
 }
 
@@ -26,9 +27,10 @@ process FASTERQ_DUMP {
     tuple eval("echo \$filename"), path("*.fastq.gz")
 
     script:
+        def args = task.ext.args ?: ''
         """
         prefix=`basename $sra_file .sra`
-        fasterq-dump \$prefix
+        fasterq-dump \$prefix $args
         gzip \${prefix}*.fastq
         if [ -f \${prefix}_1.fastq.gz ]; then
             mv \${prefix}_1.fastq.gz \${prefix}_R1.fastq.gz
