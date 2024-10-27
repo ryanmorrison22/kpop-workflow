@@ -321,7 +321,7 @@ workflow {
     TEST_FASTA_VALIDATION(test_fasta_files)
         .set {test_fasta_files}
 
-    if (!params.no_assembly) {
+    if (!params.no_qc) {
         /// FASTQ Quality Control
         FASTQ_QC1(fastq_files)
             .set { fastq_files }
