@@ -76,7 +76,8 @@ Optional arguments:
         --output_dir                        Path to output directory. If directory doesn't exist then a new directory will be created. [projectDir/results]
         --output_prefix                     Prefix for output files [output]
         --no_assembly                       Do not perform assembly on the reads, the workflow will count the number of kmers from the raw reads directly instead of assemblies
-        --no_qc                             Do not perform quality control using trim_galore                       
+        --no_qc                             Do not perform quality control using trim_galore   
+        --validate_inputs                   Perform validation check on fastq and fasta inputs to ensure they are formatted correctly, incorrectly formatted files will be skipped                     
         --cpu_num                           Number of CPUs used per process [8] 
         --meta_data                         Tsv file with two required columns with defined headers; "fileName" and "class". \
                                             "fileName" is file name if a fasta or fasta.gz file, or file prefix if paired-end fastqs. E.g. sample1.fasta.gz if fasta file or \
@@ -312,14 +313,16 @@ workflow {
     }
 
     /// Input Validation 
-    FASTQ_VALIDATION(fastq_files)
-        .set {fastq_files}
-    TEST_FASTQ_VALIDATION(test_fastq_files)
-        .set {test_fastq_files}
-    FASTA_VALIDATION(fasta_files)
-        .set {fasta_files}
-    TEST_FASTA_VALIDATION(test_fasta_files)
-        .set {test_fasta_files}
+    if (params.validate_inputs) {
+        FASTQ_VALIDATION(fastq_files)
+            .set {fastq_files}
+        TEST_FASTQ_VALIDATION(test_fastq_files)
+            .set {test_fastq_files}
+        FASTA_VALIDATION(fasta_files)
+            .set {fasta_files}
+        TEST_FASTA_VALIDATION(test_fasta_files)
+            .set {test_fasta_files}
+    }
 
     if (!params.no_qc) {
         /// FASTQ Quality Control
