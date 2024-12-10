@@ -1,6 +1,7 @@
 process DOWNLOAD_SRAS {
     cpus = params.cpu_num
     publishDir "${params.output_dir}/downloaded_samples", mode: 'copy'
+    errorStrategy 'ignore'
 
     input:
     path(list_file)
@@ -19,6 +20,7 @@ process FASTERQ_DUMP {
     tag {"$sra_file"}
     cpus = params.cpu_num
     publishDir "${params.output_dir}/downloaded_samples", mode: 'copy'
+    errorStrategy 'ignore'
 
     input:
     path(sra_file)
@@ -30,7 +32,7 @@ process FASTERQ_DUMP {
         def args = task.ext.args ?: ''
         """
         prefix=`basename $sra_file .sra`
-        fasterq-dump \$prefix $args
+        fasterq-dump \$prefix --threads ${params.cpu_num} $args
         gzip \${prefix}*.fastq
         if [ -f \${prefix}_1.fastq.gz ]; then
             mv \${prefix}_1.fastq.gz \${prefix}_R1.fastq.gz

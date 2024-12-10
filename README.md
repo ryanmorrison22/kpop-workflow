@@ -25,6 +25,12 @@ nextflow run main.nf --update --test_dir /dir/containing/new/fastqAndFastas --tw
 
 All workflows create lots of files, but the most important outputs are the database files (`.KPopTwister` and `.KPopTwisted` in KPopTwist_files) and KPop pseudo-phylogenetic tree found in `results/trees_and_metrics/output_2.<nwk/pdf>` (`--cluster`), the class/species predictions found in `results/predictions/output.<predictions/KPopSummary>.txt` (`--classify`) and the updated database files (`<output_prefix>.KPopTwisted` and `<output_prefix>.KPopTwisted`) and `updated_comparison.pdf` plot in `updated_KPopTwist_files` (`--update`).
 
+When no KPop workflow is selected, pre-processing is still performed. In the below example fastq files would be downloaded from NCBI based on IDs in `sample_list.txt`, then QC would be performed and finally assemblies would be generated. 
+
+```
+nextflow run main.nf --accession_list sample_list.txt
+```
+
 **Workflows**
 | Option | Argument(s) | Effect | Note(s) |
 |-|-|-|-|

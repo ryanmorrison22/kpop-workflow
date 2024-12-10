@@ -26,6 +26,7 @@ process ASSEMBLE_FASTQS {
                 \$R1 \\
                 \$R2 \\
                 -o \$baseName \\
+                -t ${params.cpu_num} \\
                 $args
 
             megahit \\
@@ -33,12 +34,13 @@ process ASSEMBLE_FASTQS {
                 -1 \${baseName}.notCombined_1.fastq \\
                 -2 \${baseName}.notCombined_2.fastq \\
                 -o \$baseName \\
+                -t ${params.cpu_num} \\
                 $args2
         elif [ "$is_three" == "true" ]; then
             baseName=$fileName.fileName
-            unmated=\$(echo $fastq_file | cut -d" " -f1)
-            R1=\$(echo $fastq_file | cut -d" " -f2)
-            R2=\$(echo $fastq_file | cut -d" " -f3)
+            unmated=\$(echo $fastq_file | cut -d" " -f3)
+            R1=\$(echo $fastq_file | cut -d" " -f1)
+            R2=\$(echo $fastq_file | cut -d" " -f2)
             
             flash \\
                 -m ${params.flash_minOverlap} \\
@@ -46,6 +48,7 @@ process ASSEMBLE_FASTQS {
                 \$R1 \\
                 \$R2 \\
                 -o \$baseName \\
+                -t ${params.cpu_num} \\
                 $args
 
             megahit \\
@@ -53,6 +56,7 @@ process ASSEMBLE_FASTQS {
                 -1 \${baseName}.notCombined_1.fastq \\
                 -2 \${baseName}.notCombined_2.fastq \\
                 -o \$baseName \\
+                -t ${params.cpu_num} \\
                 $args2
         else
             baseName=\$(basename $fastq_file | \\
@@ -62,6 +66,7 @@ process ASSEMBLE_FASTQS {
             megahit \\
                 -r $fastq_file \\
                 -o \$baseName \\
+                -t ${params.cpu_num} \\
                 $args2
         fi
         mv \${baseName}/final.contigs.fa \${baseName}.fasta

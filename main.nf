@@ -44,7 +44,7 @@ Usage:
         nextflow run main.nf [--cluster|--classify] --input_dir <path/to/dir> [--test_dir <path/to/dir> (required only if --classify used)]
 
 Required arguments:
-    Workflow (At least one of these)
+    Workflow (At least one of these; if one of these is not supplied the program will download, QC and assemble files then quit)
         --cluster                           Data is run through clustering workflow, starting with an unknown dataset the pipeline produces \
                                             a distance matrix and pseudophylogenetic tree showing relatedness between samples. Creates \
                                             .KPopTwister and KPopTwisted files               
@@ -144,13 +144,18 @@ if (params.help){
     exit 0
 }
 
-// Define errors
+// Define warnings
 if (!params.cluster && !params.classify && !params.update){
-    log.error"""--cluster, --classify or --update required for workflow. Use --help for more information.
+    log.warn"""Current run will only perform steps before KPop analysis. --cluster, --classify or --update required for KPop workflows. Use --help for more information.
     """.stripIndent()
-    exit 0
 }
 
+if (params.classify && params.meta_data == ""){
+    log.warn"""Each individual file in --input_dir will be treated as a class as --meta_data not specified. If you want to combine files into classes or rename classes please use --meta_data. Use --help for more information.
+    """.stripIndent()
+}
+
+// Define errors
 if (params.input_dir == "" && params.accession_list == ""){
     log.error"""--input_dir or --accession_list required for workflow. Use --help for more information.
     """.stripIndent()
@@ -161,11 +166,6 @@ if (params.classify && params.test_dir == "" && params.test_accession_list == ""
     log.error"""--test_dir or --test_accession_list required for --classify workflow. Use --help for more information.
     """.stripIndent()
     exit 0
-}
-
-if (params.classify && params.meta_data == ""){
-    log.warn"""Each individual file in --input_dir will be treated as a class as --meta_data not specified. If you want to combine files into classes or rename classes please use --meta_data. Use --help for more information.
-    """.stripIndent()
 }
 
 if (params.input_dir != "") {
@@ -369,7 +369,7 @@ workflow {
                     .replace(".fasta.gz", "").replace(".fastq.gz", "")
                     .replace(".fasta", "").replace(".fastq", "")
                     .replace(".fa.gz", "").replace(".fq.gz", "")
-                    .replace(".fa", "").replace(".fq", ""), file(params.match_reference)])
+                    .replace(".fa", "").replace(".fq", ""), file(params.match_reference, checkIfExists: true)])
                     .set {adjusted_concat_fasta_files}
                 MATCH_REFERENCE_CONTIGS1(adjusted_concat_fasta_files)
                     .map(it -> [[fileName: it[1]], it[0]])
@@ -426,7 +426,6 @@ workflow {
                     .join(cluster_meta_file, by: [0])
                     .map {it -> [it[2], it[1]]}
                     .groupTuple(by: [0])
-                //////////////
                     .map {it -> [it[1], it[0].new_class]}
                     .set {cluster_fastq_list}
 
@@ -438,7 +437,6 @@ workflow {
                 KPOPCOUNT_COMBINE_CLASS_COUNTS1(raw_fastq_cluster_count_list)
                     .map(it -> [it, "clustered"])
                     .set {cluster_kpopcount_file}
-                ///////////
 
             } else {
                 concat_fasta_files
@@ -476,7 +474,6 @@ workflow {
                     .join(cluster_meta_file, by: [0])
                     .map {it -> [it[2], it[1]]}
                     .groupTuple(by: [0])
-                ////////////////
                     .map {it -> [it[1], it[0].new_class]}
                     .set {cluster_fasta_list}
                 
@@ -488,7 +485,6 @@ workflow {
                 KPOPCOUNT_COMBINE_CLASS_COUNTS1(raw_cluster_count_list)
                     .map(it -> [it, "clustered"])
                     .set {cluster_kpopcount_file}
-                ///////////////
             }
 
             // Generate Twister file based on clusters
@@ -541,7 +537,7 @@ workflow {
         // Only use train sequences that match with reference if reference provided
         if (params.match_reference != "") {
             concat_meta_fasta_files
-                .map(it -> [it[1], "${it[0].meta_class}_${it[1].getBaseName(file(it[1]).name.endsWith('.gz')? 2: 1)}", file(params.match_reference)])
+                .map(it -> [it[1], "${it[0].meta_class}_${it[1].getBaseName(file(it[1]).name.endsWith('.gz')? 2: 1)}", file(params.match_reference, checkIfExists: true)])
                 .set {adjusted_concat_meta_fasta_files}
             MATCH_REFERENCE_CONTIGS1(adjusted_concat_meta_fasta_files)
                 .map(it -> [[meta_class: it[1].toString().split("_")[0]], it[0]])
@@ -562,7 +558,7 @@ workflow {
                 .replace(".fasta.gz", "").replace(".fastq.gz", "")
                 .replace(".fasta", "").replace(".fastq", "")
                 .replace(".fa.gz", "").replace(".fq.gz", "")
-                .replace(".fa", "").replace(".fq", ""), file(params.match_reference)])
+                .replace(".fa", "").replace(".fq", ""), file(params.match_reference, checkIfExists: true)])
                 .set {test_adjusted_concat_fasta_files}
             MATCH_REFERENCE_CONTIGS2(test_adjusted_concat_fasta_files)
                 .map(it -> [[fileName: it[1]], it[0]])
@@ -575,7 +571,6 @@ workflow {
             .map(it -> [it, "test"])
             .set {test_fasta_list}
 
-        ////////////
         // Combine and count kmers training data
         concat_meta_fasta_files
             .groupTuple(by: [0])
@@ -590,7 +585,6 @@ workflow {
         KPOPCOUNT_COMBINE_CLASS_COUNTS1(raw_class_count_list)
             .map(it -> [it, "train"])
             .set {train_kpopcount_file}
-        ////////////
 
         if (params.max_dim != 0) { // If the dimension size is specified, else run all dimensions available        
             concat_meta_fasta_files
@@ -618,7 +612,6 @@ workflow {
                 .map { row -> meta = [[meta_class: row.fileName], [new_class: "clusteredClass_${row.class}"]] }
                 .set {train_cluster_meta_file}
 
-            ////////////////
             concat_meta_fasta_files
                 .groupTuple(by: [0])
                 .join(train_cluster_meta_file, by: [0][0])
@@ -635,7 +628,6 @@ workflow {
             KPOPCOUNT_COMBINE_CLASS_COUNTS2(raw_cluster_count_list)
                 .map(it -> [it, "clustered"])
                 .set {train_cluster_kpopcount_file}
-            ///////////////
 
             // Generate Twister file based on clusters
             KPOPTWIST2(train_cluster_kpopcount_file)
@@ -666,25 +658,42 @@ workflow {
     //TO DO: ALLOW USE OF READS INSTEAD OF ASSEMBLING
 
     if (params.update) {
-        assembled_fastas.concat(fasta_files)
-            .set {concat_fasta_files}
-        if (params.match_reference != "") {
-            concat_fasta_files
-                .map(it -> [it[1], it[0].fileName, file(params.match_reference)])
-                .set {adjusted_concat_fasta_files}
-            MATCH_REFERENCE_CONTIGS1(adjusted_concat_fasta_files)
-                .map(it -> [[fileName: it[1]], it[0]])
-                .set {concat_fasta_files}
-        }
+        if (params.no_assembly) { // If starting from reads
 
-        concat_fasta_files
-            .map(it -> it[1])
-            .toSortedList()
-            .map(it -> [it, params.output_prefix])
-            .set {fasta_list}
-        KPOPCOUNT1(fasta_list)
-            .map(it -> [it, "temp", file(params.twister_file), file(params.twisted_file)])
-            .set {kpopcount_file}
+            //TO DO: USE READS THAT MAP ONLY TO A REFERENCE
+
+            fastq_files
+                .map(it -> it[1].toString().replace(", ", "?")) //Need to replace the ", " with something unique so we can separate the files in KPOPCOUNT_READS 
+                .toSortedList()
+                .map(it -> [it, params.output_prefix])
+                .set {fastq_list}
+            KPOPCOUNT_READS1(fastq_list)
+                .map(it -> [it, "temp", file(params.twister_file), file(params.twisted_file)])
+                .set {kpopcount_file}
+        
+        } else {
+            
+            assembled_fastas.concat(fasta_files)
+                .set {concat_fasta_files}
+            
+            if (params.match_reference != "") {
+                concat_fasta_files
+                    .map(it -> [it[1], it[0].fileName, file(params.match_reference, checkIfExists: true)])
+                    .set {adjusted_concat_fasta_files}
+                MATCH_REFERENCE_CONTIGS1(adjusted_concat_fasta_files)
+                    .map(it -> [[fileName: it[1]], it[0]])
+                    .set {concat_fasta_files}
+            }
+
+            concat_fasta_files
+                .map(it -> it[1])
+                .toSortedList()
+                .map(it -> [it, params.output_prefix])
+                .set {fasta_list}
+            KPOPCOUNT1(fasta_list)
+                .map(it -> [it, "temp", file(params.twister_file), file(params.twisted_file)])
+                .set {kpopcount_file}
+        }
         GENERATE_KPOPTWISTED1(kpopcount_file)
             .map(it -> [it[0], params.output_prefix, it[2], it[3]])
             .set {updating_file}
