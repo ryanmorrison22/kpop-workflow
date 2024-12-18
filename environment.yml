@@ -2,7 +2,6 @@ name: kpop
 channels:
   - conda-forge
   - bioconda
-  - defaults
 dependencies:
   - nextflow
   - kpop

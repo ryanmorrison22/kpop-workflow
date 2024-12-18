@@ -24,6 +24,7 @@ process KPOPPHYLO {
         $projectDir/bin/KPopPhylo \\
         \$twister_prefix \\
         \$twisted_prefix \\
+        ${prefix} \\
         ${params.kpopPhylo_power} \\
         ${params.kpopPhylo_distance} \\
         ${params.kpopPhylo_magic} \\

@@ -11,6 +11,7 @@ include { KPOPCOUNT_READS_BY_CLASS } from './modules/kpopCount'
 include { KPOPCOUNT_READS as KPOPCOUNT_READS1 } from './modules/kpopCount'
 include { KPOPCOUNT_READS as KPOPCOUNT_READS2 } from './modules/kpopCount'
 include { GENERATE_TEST_TWISTED } from './modules/generate_test_twisted'
+include { GENERATE_TEST_TWISTED_FROM_KPOPCOUNTER } from './modules/generate_test_twisted'
 include { KPOPPHYLO } from './modules/kpopPhylo'
 include { KPOPTWIST as KPOPTWIST1 } from './modules/kpopTwist'
 include { KPOPTWIST as KPOPTWIST2 } from './modules/kpopTwist'
@@ -67,6 +68,10 @@ Required arguments:
                                             Only required if --classify workflow invoked
         --twisted_file                      Full path to .KPopTwisted file. Only required for --update workflow
         --twister_file                      Full path to .KPopTwister file. Only required for --update workflow
+        --kpopcount_input                   .KPopCounter file as an input. \
+                                            Incompatible with --no_assembly, --match_reference, --input_dir, --accession_list, --max_dim and --meta_data options
+        --kpopcount_test_input              .KPopCounter file as a test input. Only required if --classify workflow invoked. \
+                                            Incompatible with --no_assembly, --match_reference, --input_dir, --accession_list, --max_dim and --meta_data options 
 
 Optional arguments:
     General arguments
@@ -150,25 +155,31 @@ if (!params.cluster && !params.classify && !params.update){
     """.stripIndent()
 }
 
-if (params.classify && params.meta_data == ""){
+if (params.classify && params.meta_data == "" && params.kpopcount_input == ""){
     log.warn"""Each individual file in --input_dir will be treated as a class as --meta_data not specified. If you want to combine files into classes or rename classes please use --meta_data. Use --help for more information.
     """.stripIndent()
 }
 
 // Define errors
-if (params.input_dir == "" && params.accession_list == ""){
-    log.error"""--input_dir or --accession_list required for workflow. Use --help for more information.
+if (params.input_dir == "" && params.accession_list == "" && params.kpopcount_input == ""){
+    log.error"""--input_dir or --accession_list or --kpopcount_input required for workflow. Use --help for more information.
     """.stripIndent()
     exit 0
 }
 
-if (params.classify && params.test_dir == "" && params.test_accession_list == ""){
-    log.error"""--test_dir or --test_accession_list required for --classify workflow. Use --help for more information.
+if (params.classify && params.test_dir == "" && params.test_accession_list == "" && params.kpopcount_test_input == ""){
+    log.error"""--test_dir, --test_accession_list or kpopcount_test_input required for --classify workflow. Use --help for more information.
     """.stripIndent()
     exit 0
 }
 
-if (params.input_dir != "") {
+if (params.kpopcount_input != "" && (params.no_assembly == true || params.match_reference != "" || params.input_dir != "" || params.accession_list != "" || params.max_dim != 0 || params.meta_data != "")){
+    log.error"""--kpopcount_input is incompatible with --no_assembly, --match_reference, --input_dir, --accession_list, --max_dim and --meta_data options. Use --help for more information.
+    """.stripIndent()
+    exit 0
+}
+
+if (params.input_dir != "") { // If an input directory is supplied
     
     // Channels created for all fastas, paired fastas and all paired fastqs in input_dir
     FASTAS = "${params.input_dir}/*.{fasta,fa,fasta.gz,fa.gz}"
@@ -343,9 +354,12 @@ workflow {
 
     /// Clustering workflow
     if (params.cluster) {
-
-        // Determine number of dimensions
-        if (params.no_assembly) { // If starting from reads
+        if (params.kpopcount_input != "") { // If .KPopCount is supplied as input
+            Channel
+                .fromPath( params.kpopcount_input )
+                .map(it -> [it, params.output_prefix])
+                .set {kpopcount_file}
+        } else if (params.no_assembly) { // If starting from reads
 
             //TO DO: USE READS THAT MAP ONLY TO A REFERENCE
 
@@ -358,7 +372,7 @@ workflow {
                 .map(it -> [it, params.output_prefix])
                 .set {kpopcount_file}
         
-        } else {
+        } else { // If starting with fastas
             assembled_fastas.concat(fasta_files)
                 .set {concat_fasta_files}
 
@@ -388,7 +402,7 @@ workflow {
         if (params.max_dim != 0) { // If the dimension size is specified, else run all dimensions available
 
             // Generate KPopCounts and KPopTwister for the number of dimensions
-            if (params.no_assembly) { // If starting from reads - NEED TO IMPLEMENT PAIRED
+            if (params.no_assembly) { // If starting from reads
                 fastq_files
                     | randomSample( params.max_dim+1, 1) 
                     | map(it -> it[1].toString().replace(", ", "?")) //Need to replace the ", " with something unique so we can separate the files in KPOPCOUNT_READS 
@@ -438,7 +452,7 @@ workflow {
                     .map(it -> [it, "clustered"])
                     .set {cluster_kpopcount_file}
 
-            } else {
+            } else { 
                 concat_fasta_files
                     | randomSample( params.max_dim+1, 1) 
                     | map(it -> it[1])
@@ -572,19 +586,26 @@ workflow {
             .set {test_fasta_list}
 
         // Combine and count kmers training data
-        concat_meta_fasta_files
-            .groupTuple(by: [0])
-            .map(it -> [it[1], it[0].meta_class])
-            .set {train_fasta_list}
+        if (params.kpopcount_input != "") { // If .KPopCount is supplied as input
+            Channel
+                .fromPath( params.kpopcount_input )
+                .map(it -> [it, "train"])
+                .set {train_kpopcount_file}
+        } else {
+            concat_meta_fasta_files
+                .groupTuple(by: [0])
+                .map(it -> [it[1], it[0].meta_class])
+                .set {train_fasta_list}
 
-        KPOPCOUNT_BY_CLASS1(train_fasta_list)
-            .collect()
-            .map(it -> [it, "train"])
-            .set {raw_class_count_list}
+            KPOPCOUNT_BY_CLASS1(train_fasta_list)
+                .collect()
+                .map(it -> [it, "train"])
+                .set {raw_class_count_list}
 
-        KPOPCOUNT_COMBINE_CLASS_COUNTS1(raw_class_count_list)
-            .map(it -> [it, "train"])
-            .set {train_kpopcount_file}
+            KPOPCOUNT_COMBINE_CLASS_COUNTS1(raw_class_count_list)
+                .map(it -> [it, "train"])
+                .set {train_kpopcount_file}
+        }
 
         if (params.max_dim != 0) { // If the dimension size is specified, else run all dimensions available        
             concat_meta_fasta_files
@@ -646,16 +667,21 @@ workflow {
         }
         
         // Twist test files based on training twister and use the positional information within multidimensional space to predict classes
-        train_test_files = train_kpoptwist_files
-            .combine(test_fasta_list)
-            .map(it -> [it[0][0], it[0][1], it[2]])
-        train_test_kpop_files = GENERATE_TEST_TWISTED(train_test_files)
+
+        if (params.kpopcount_input != "") { // If .KPopCount is supplied as input
+            train_test_files = train_kpoptwist_files
+                .map(it -> [it[0][0], it[0][1], file(params.kpopcount_test_input)])
+            train_test_kpop_files = GENERATE_TEST_TWISTED_FROM_KPOPCOUNTER(train_test_files)
+        } else {
+            train_test_files = train_kpoptwist_files
+                .combine(test_fasta_list)
+                .map(it -> [it[0][0], it[0][1], it[2]])
+            train_test_kpop_files = GENERATE_TEST_TWISTED(train_test_files)
+        }
         PREDICT_TEST_SET(train_test_kpop_files)
     }
 
     /// Update workflow
-
-    //TO DO: ALLOW USE OF READS INSTEAD OF ASSEMBLING
 
     if (params.update) {
         if (params.no_assembly) { // If starting from reads

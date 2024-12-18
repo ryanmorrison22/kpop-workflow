@@ -2,11 +2,12 @@
 
 TWISTER="$1"
 TWISTED="$2"
-POWER="$3"
-DISTANCE="$4"
-MAGIC="$5"
-ORIENTATION="$6"
-LABEL_SIZE="$7"
+OUTPUT="$3"
+POWER="$4"
+DISTANCE="$5"
+MAGIC="$6"
+ORIENTATION="$7"
+LABEL_SIZE="$8"
 
 if [[ "$POWER" == "" ]]; then
   POWER="2"
@@ -22,6 +23,9 @@ if [[ "$ORIENTATION" == "" ]]; then
 fi
 if [[ "$LABEL_SIZE" == "" ]]; then
   LABEL_SIZE="3"
+fi
+if [[ "$OUTPUT" == "" ]]; then
+  OUTPUT=$TWISTED
 fi
 
 if [[ "$TWISTER" == "" || "$TWISTED" == "" ]]; then
@@ -133,5 +137,5 @@ write.table(as.matrix(di),paste0(modified_output,".distances.txt"),sep="\t")
   #heatmap(as.matrix(di),hclustfun=ape::nj)
   #dev.off()
 _____
-) "$TWISTER" "$TWISTED" "$POWER" "$DISTANCE" "$MAGIC" "$TWISTED" "$ORIENTATION" "$LABEL_SIZE"
+) "$TWISTER" "$TWISTED" "$POWER" "$DISTANCE" "$MAGIC" "$OUTPUT" "$ORIENTATION" "$LABEL_SIZE"
 

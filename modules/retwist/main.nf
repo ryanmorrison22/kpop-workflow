@@ -62,6 +62,7 @@ process UPDATE_PLOT {
         $projectDir/bin/KPopPhylo \\
         \$twister_prefix  \\
         \$twisted_prefix \\
+        \$twisted_prefix \\
         ${params.kpopPhylo_power} \\
         ${params.kpopPhylo_distance} \\
         ${params.kpopPhylo_magic} \\
@@ -70,6 +71,7 @@ process UPDATE_PLOT {
         
         $projectDir/bin/KPopPhylo \\
         \$updated_twister_prefix  \\
+        \$updated_twisted_prefix \\
         \$updated_twisted_prefix \\
         ${params.kpopPhylo_power} \\
         ${params.kpopPhylo_distance} \\

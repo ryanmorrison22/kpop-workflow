@@ -48,6 +48,8 @@ nextflow run main.nf --accession_list sample_list.txt
 | `--meta_data` | _TSV\_filename_ | Tsv file with two required columns with defined headers; "fileName" and "class". "fileName" is file name if a fasta or fasta.gz file, or file prefix if paired-end fastqs. E.g. sample1.fasta.gz if fasta file or sample1 if sample1_R1.fastq.gz and sample1_R2.fastq.gz. Only required if `--classify` workflow invoked. If used with `--cluster` workflow, it will generate a pseudo-phylogenetic tree coloured with metadata. Additional columns allowed. |  | 
 | `--twisted_file` | _.KPopTwisted\_file_ | Full path to .KPopTwisted file. Only required for `--update` workflow. |  |
 | `--twister_file` | _.KPopTwister\_file_ | Full path to .KPopTwister file. Only required for `--update` workflow. |  |
+| `--kpopcount_input` | _.KPopCounter\_file_ | `.KPopCounter` file as an input. Incompatible with `--no_assembly`, `--match_reference`, `--input_dir`, `--accession_list`, `--max_dim` and `--meta_data` options. |  |
+| `--kpopcount_test_input` | _.KPopCounter\_file_ | `.KPopCounter` file as a test input. Only required if `--classify` workflow invoked. Incompatible with `--no_assembly`, `--match_reference`, `--input_dir`, `--accession_list`, `--max_dim` and `--meta_data` options. |  | 
 
 **Output**
 | Option | Argument(s) | Effect | Note(s) |

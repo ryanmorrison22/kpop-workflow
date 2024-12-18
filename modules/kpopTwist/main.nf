@@ -11,6 +11,7 @@ process KPOPTWIST {
     script:
         def args = task.ext.args ?: ''
         """
-        KPopTwist -i $prefix -o $prefix -v $args
+        counter_prefix=\$(echo $counter_file | sed 's/.KPopCounter//')
+        KPopTwist -i \$counter_prefix -o $prefix -v $args
         """
 }
