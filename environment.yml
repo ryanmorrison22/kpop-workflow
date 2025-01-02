@@ -6,7 +6,6 @@ dependencies:
   - nextflow
   - kpop
   - bash >=4.4.18
-  - r-base = 4.2.3
   - r-tidyverse
   - r-ape
   - r-phangorn
@@ -16,7 +15,7 @@ dependencies:
   - r-codetools
   - bioconductor-ggtree
   - bioconductor-ggtreeextra
-  - megahit >= 1.2.9
+  - megahit
   - flash
   - lastz
   - seqkit
