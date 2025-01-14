@@ -1,6 +1,6 @@
 process PREDICT_TEST_SET {
-    cpus = params.cpu_num
-    publishDir "${params.output_dir}/predictions", mode: 'copy'
+    
+    label 'process_low'
 
     input:
     tuple path(train_twister), path(train_twisted), path(test_twisted)

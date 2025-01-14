@@ -1,7 +1,7 @@
 process INPUT_VALIDATION {
-    cpus = params.cpu_num
     tag {fast_file}
-    errorStrategy 'ignore'
+
+    label 'process_single'
 
     input:
     tuple val(fileName), path(fast_file)

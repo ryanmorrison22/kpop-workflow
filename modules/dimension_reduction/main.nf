@@ -1,6 +1,6 @@
 process CLUSTERING {
-    cpus = params.cpu_num
-    publishDir "${params.output_dir}/dimension_reduction", mode: 'copy'
+
+    label 'process_single'
 
     input:
     tuple path(retwisted_file), val(prefix), path(twister_file), path(twisted_file)

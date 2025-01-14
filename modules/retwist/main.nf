@@ -1,6 +1,6 @@
 process GENERATE_KPOPTWISTED {
-    cpus = params.cpu_num
-    publishDir "${params.output_dir}/KPopTwist_files", mode: 'copy'
+
+    label 'process_medium'
 
     input:
     tuple path(counter_file), val(prefix), path(twister_file), path(twisted_file)
@@ -21,8 +21,8 @@ process GENERATE_KPOPTWISTED {
 }
 
 process KPOPTWIST_UPDATE {
-    cpus = params.cpu_num
-    publishDir "${params.output_dir}/updated_KPopTwist_files", mode: 'copy'
+
+    label 'process_medium'
 
     input:
     tuple path(updating_file), val(prefix), path(twister_file), path(twisted_file)
@@ -42,8 +42,8 @@ process KPOPTWIST_UPDATE {
 }
 
 process UPDATE_PLOT {
-    cpus = params.cpu_num
-    publishDir "${params.output_dir}/updated_KPopTwist_files", mode: 'copy'
+
+    label 'process_single'
 
     input:
     tuple path(updated_twisted_file), val(prefix), path(twister_file), path(twisted_file), path(updated_twister_file)

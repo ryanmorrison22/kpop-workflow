@@ -1,7 +1,7 @@
 process ASSEMBLY_STATS {
     tag {"$fasta_file"}
-    cpus = params.cpu_num
-    publishDir "${params.output_dir}/assembly_statistics", mode: 'copy'
+    
+    label 'process_single'
 
     input:
     tuple val(prefix), path(fasta_file)

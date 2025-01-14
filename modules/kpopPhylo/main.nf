@@ -1,6 +1,6 @@
 process KPOPPHYLO {
-    cpus = params.cpu_num
-    publishDir "${params.output_dir}/trees_and_metrics", mode: 'copy'
+
+    label 'process_single'
 
     input:
     tuple path(twister_file), path(twisted_file), val(prefix)

@@ -1,7 +1,7 @@
 process FASTQ_QC {
     tag {"$fileName.fileName"}
-    cpus = params.cpu_num
-    publishDir "${params.output_dir}/QC_trimmed_fastqs", mode: 'copy'
+
+    label 'process_low'
 
     input:
     tuple val(fileName), path(fastq_file)

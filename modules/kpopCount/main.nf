@@ -1,6 +1,6 @@
 process KPOPCOUNT {
-    cpus = params.cpu_num
-    publishDir "${params.output_dir}/kmer_counts", mode: 'copy'
+
+    label 'process_low'
 
     input:
     tuple path(fasta_list), val(prefix)
@@ -30,8 +30,8 @@ process KPOPCOUNT {
 
 process KPOPCOUNT_BY_CLASS {
     tag {"Class: $class_name"}
-    cpus = params.cpu_num
-    publishDir "${params.output_dir}/kmer_counts", mode: 'copy'
+
+    label 'process_low'
 
     input:
     tuple path(fasta_list), val(class_name)
@@ -62,9 +62,8 @@ process KPOPCOUNT_BY_CLASS {
 }
 
 process KPOPCOUNT_READS {
-    cpus = params.cpu_num
-    debug true
-    publishDir "${params.output_dir}/kmer_counts", mode: 'copy'
+
+    label 'process_low'
 
     input:
     tuple val(fastq_file_list), val(prefix)
@@ -117,8 +116,8 @@ process KPOPCOUNT_READS {
 
 process KPOPCOUNT_READS_BY_CLASS {
     tag {"Class: $class_name"}
-    cpus = params.cpu_num
-    publishDir "${params.output_dir}/kmer_counts"
+    
+    label 'process_low'
 
     input:
     tuple val(fastq_list), val(class_name)
@@ -172,8 +171,8 @@ process KPOPCOUNT_READS_BY_CLASS {
 }
 
 process KPOPCOUNT_COMBINE_CLASS_COUNTS {
-    cpus = params.cpu_num
-    publishDir "${params.output_dir}/kmer_counts", mode: 'copy'
+    
+    label 'process_low'
 
     input:
     tuple path(raw_count_list), val(prefix)

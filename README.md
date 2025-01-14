@@ -40,7 +40,7 @@ nextflow run main.nf --accession_list sample_list.txt
 
 **Input**  
 | Option | Argument(s) | Effect | Note(s) |
-|-|-|-|-|
+|------|-|-|-|
 | `--input_dir` | _directory\_name_ | Path to directory containing fasta/fastq files. Paired-end fastqs require "R1" and "R2" in filenames. Gzipped files are allowed. If `--classify` used this directory is the training dataset. |  |
 | `--test_dir` | _directory\_name_ | Directory containing unseen test dataset. Only required if `--classify` workflow invoked. |  |
 | `--accession_list` | _txt\_filename_ | Supply a list of SRA IDs to download as input samples in the form of a text file, with one SRA per line. |  |
@@ -69,12 +69,14 @@ nextflow run main.nf --accession_list sample_list.txt
 | Option | Argument(s) | Effect | Note(s) |
 |-|-|-|-|
 | `--kmer_len` | _positive\_integer_ | Length of k-mer to use when generating spectra | <ins>default=_12_</ins> |
-| `--cpu_num` | _positive\_integer_ | Number of CPUs used per process | <ins>default=_8_</ins> |
 | `--no_assembly` |  | Do not perform assembly on the reads, the workflow will count the number of kmers from the raw reads directly instead of assemblies |  |
 | `--no_qc` |  | Do not perform quality control using trim_galore |  |    
 | `--validate_inputs` |  | Perform validation check on fastq and fasta inputs to ensure they are formatted correctly, incorrectly formatted files will be skipped |  |
 | `--max_dim` | _positive\_integer_ | Maximum number of dimensions used to separate data. Choosing 0 uses all available dimensions, which will be one less than the number of samples for `--cluster` or one less than the number of classes if `--classify`. A lower number will reduce memory usage. If the data cannot be separated into the number chosen, less dimensions will be chosen automatically. Must not be a number above the maximum number of samples. | <ins>default=_0_</ins> |
 | `-profile` | _conda_ | Install the required conda environment automatically from the environment.yml file found in the same directory as main.nf. Slower than installing it manually. |  |
+| `--max_cpus` | _positive\_integer_ | Specify the maximum number of CPUs used during the running of the workflow. | <ins>default=_maximum available up to 64 CPUs_</ins> |
+| `--max_memory` | _positive\_integer_ | Specify the maximum number of GBs used during the running of the workflow. | <ins>default=_maximum available up to 256 GBs_</ins> |
+| `--max_hours` | _positive\_integer_ | Specify the maximum number of hours used during a process when running of the workflow. | <ins>default=_maximum available up to 64 hours_</ins> |
 | `--help` |  | Print help instructions |  |
 
 **Additional arguments**
@@ -96,4 +98,4 @@ nextflow run main.nf --accession_list sample_list.txt
 | `--kpopPhylo_power` | _positive\_integer_ | Set the external power when computing distances. | <ins>default=_2_</ins> |
 | `--kpopPhylo_distance` | _string_ | Distance measure to be used. This must be one of 'euclidean', 'maximum', 'manhattan', 'canberra', 'binary' or 'minkowski'. | <ins>default=_euclidean_</ins> |
 | `--kpopPhylo_magic` | _string_ | Cluster-related variable (Not currently implemented). | <ins>default=_1._</ins> |
-| `--kpopScale_power` | _string_ | Set the external power when computing distances. | <ins>default=_2_</ins> |
+| `--kpopScale_power` | _positive\_integer_ | Set the external power when computing distances. | <ins>default=_2_</ins> |

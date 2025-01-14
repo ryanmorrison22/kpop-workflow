@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - nextflow
+  - nextflow >= 24.04.0
   - kpop
   - bash >= 4.4.18
   - r-base >= 4.2.3
@@ -20,6 +20,6 @@ dependencies:
   - flash
   - lastz
   - seqkit
-  - sra-tools >=3.1.1
+  - sra-tools >= 3.1.1
   - trim-galore
 
