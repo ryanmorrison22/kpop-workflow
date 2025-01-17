@@ -1,6 +1,6 @@
 process PREDICT_TEST_SET {
     
-    label 'process_low'
+    label 'process_medium'
 
     input:
     tuple path(train_twister), path(train_twisted), path(test_twisted)

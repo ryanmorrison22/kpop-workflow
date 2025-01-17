@@ -1,6 +1,6 @@
 process DOWNLOAD_SRAS {
 
-    label 'process_single'
+    label 'process_medium'
 
     input:
     path(list_file)
@@ -18,7 +18,7 @@ process DOWNLOAD_SRAS {
 process FASTERQ_DUMP {
     tag {"$sra_file"}
 
-    label 'process_single'
+    label 'process_low'
 
     input:
     path(sra_file)

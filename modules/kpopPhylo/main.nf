@@ -1,6 +1,6 @@
 process KPOPPHYLO {
 
-    label 'process_single'
+    label 'process_medium'
 
     input:
     tuple path(twister_file), path(twisted_file), val(prefix)

@@ -1,6 +1,6 @@
 process CLUSTERING {
 
-    label 'process_single'
+    label 'process_low'
 
     input:
     tuple path(retwisted_file), val(prefix), path(twister_file), path(twisted_file)
