@@ -170,6 +170,30 @@ process KPOPCOUNT_READS_BY_CLASS {
         """
 }
 
+process KPOPCOUNT_BY_CLASS_FROM_KPOPCOUNTER {
+    tag {"Class: $class_name"}
+    
+    label 'process_low'
+
+    input:
+    tuple val(sample_list), val(class_name), path(input_counter_file)
+    
+    output:
+    path("*raw_counts.txt.gz")
+
+    script:
+        def args = task.ext.args ?: ''
+        """
+        counter_file_prefix=\$(echo $input_counter_file | sed 's/.KPopCounter//')
+        echo $sample_list >> test5.txt
+        corrected_list=\$(echo $sample_list | sed 's/\\[//g' | sed 's/\\]//g' | sed 's/ //g')  
+        echo \$corrected_list >> test5.txt 
+        KPopCountDB -i \$counter_file_prefix -L \$corrected_list -A $class_name -L $class_name -N -D -t $class_name 2> /dev/null $args
+        mv ${class_name}.KPopCounter.txt ${class_name}_raw_counts.txt
+        gzip ${class_name}_raw_counts.txt
+        """
+}
+
 process KPOPCOUNT_COMBINE_CLASS_COUNTS {
     
     label 'process_low'

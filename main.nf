@@ -10,6 +10,7 @@ include { KPOPCOUNT_COMBINE_CLASS_COUNTS as KPOPCOUNT_COMBINE_CLASS_COUNTS2 } fr
 include { KPOPCOUNT_READS_BY_CLASS } from './modules/kpopCount'
 include { KPOPCOUNT_READS as KPOPCOUNT_READS1 } from './modules/kpopCount'
 include { KPOPCOUNT_READS as KPOPCOUNT_READS2 } from './modules/kpopCount'
+include { KPOPCOUNT_BY_CLASS_FROM_KPOPCOUNTER } from './modules/kpopCount'
 include { GENERATE_TEST_TWISTED } from './modules/generate_test_twisted'
 include { GENERATE_TEST_TWISTED_FROM_KPOPCOUNTER } from './modules/generate_test_twisted'
 include { KPOPPHYLO } from './modules/kpopPhylo'
@@ -35,6 +36,7 @@ include { INPUT_VALIDATION as TEST_FASTA_VALIDATION } from './modules/input_vali
 include { INPUT_VALIDATION as FASTQ_VALIDATION } from './modules/input_validation'
 include { INPUT_VALIDATION as TEST_FASTQ_VALIDATION } from './modules/input_validation'
 include { CLUSTERING } from './modules/dimension_reduction'
+include { KPOPCOUNTER_SAMPLE_REDUCTION } from './modules/dimension_reduction'
 include { FASTQ_QC as FASTQ_QC1 } from './modules/quality_control'
 include { FASTQ_QC as FASTQ_QC2 } from './modules/quality_control'
 
@@ -177,8 +179,8 @@ if (params.classify && params.test_dir == "" && params.test_accession_list == ""
     exit 0
 }
 
-if (params.kpopcount_input != "" && (params.no_assembly == true || params.match_reference != "" || params.input_dir != "" || params.accession_list != "" || params.max_dim != 0 || params.meta_data != "")){
-    log.error"""--kpopcount_input is incompatible with --no_assembly, --match_reference, --input_dir, --accession_list, --max_dim and --meta_data options. Use --help for more information.
+if (params.kpopcount_input != "" && (params.no_assembly == true || params.match_reference != "" || params.input_dir != "" || params.accession_list != "" || params.meta_data != "")){
+    log.error"""--kpopcount_input is incompatible with --no_assembly, --match_reference, --input_dir, --accession_list, and --meta_data options. Use --help for more information.
     """.stripIndent()
     exit 0
 }
@@ -405,8 +407,48 @@ workflow {
 
         if (params.max_dim != 0) { // If the dimension size is specified, else run all dimensions available
 
+            // Reduce dimensions from KPopCounts
+            if (params.kpopcount_input != "") {
+                kpopcount_file
+                    | map(it -> [it[0], "reduced_dim", params.max_dim+1])
+                    | KPOPCOUNTER_SAMPLE_REDUCTION
+                    | map(it -> [it, "reduced_dim"])
+                    | KPOPTWIST1
+                    | set {red_dim_kpoptwist_files}
+            
+                // Twisting all samples with reduced twister
+                GENERATE_KPOPTWISTED1(kpopcount_file.combine(red_dim_kpoptwist_files))
+                    .map(it -> [it[0], "reduced_temp", it[2], it[3]])
+                    .set {retwisted_files}
+
+                /// Create embeddings using KPopScale
+                CLUSTERING(retwisted_files)
+                    .set {cluster_file}
+
+                /// KPopCount per cluster
+                cluster_file
+                    .splitCsv(header:true, sep: "\t")
+                    .map { row -> meta = [[fileName: row.fileName.toString().split("/")[-1]], [new_class: "clusteredClass_${row.class}"]] }
+                    .set {cluster_meta_file}
+                
+                cluster_meta_file
+                    .map(it -> [it[1], it[0].fileName])
+                    .groupTuple(by: [0])
+                    .map(it -> [it[1], it[0].new_class, file(params.kpopcount_input)])
+                    .set {cluster_kpopcounter_list}
+                
+                KPOPCOUNT_BY_CLASS_FROM_KPOPCOUNTER(cluster_kpopcounter_list)
+                    .collect()
+                    .map(it -> [it, "clustered"])
+                    .set {raw_cluster_count_list}
+
+                KPOPCOUNT_COMBINE_CLASS_COUNTS1(raw_cluster_count_list)
+                    .map(it -> [it, "clustered"])
+                    .set {cluster_kpopcount_file}
+            }
+
             // Generate KPopCounts and KPopTwister for the number of dimensions
-            if (params.no_assembly) { // If starting from reads
+            else if (params.no_assembly) { // If starting from reads
                 fastq_files
                     | randomSample( params.max_dim+1, 1) 
                     | map(it -> it[1].toString().replace(", ", "?")) //Need to replace the ", " with something unique so we can separate the files in KPOPCOUNT_READS 
