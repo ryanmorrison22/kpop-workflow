@@ -1,6 +1,6 @@
 process KPOPCOUNT {
 
-    label 'process_low'
+    label 'process_high'
 
     input:
     tuple path(fasta_list), val(prefix)
@@ -31,7 +31,7 @@ process KPOPCOUNT {
 process KPOPCOUNT_BY_CLASS {
     tag {"Class: $class_name"}
 
-    label 'process_low'
+    label 'process_high'
 
     input:
     tuple path(fasta_list), val(class_name)
@@ -63,7 +63,7 @@ process KPOPCOUNT_BY_CLASS {
 
 process KPOPCOUNT_READS {
 
-    label 'process_low'
+    label 'process_high'
 
     input:
     tuple val(fastq_file_list), val(prefix)
@@ -117,7 +117,7 @@ process KPOPCOUNT_READS {
 process KPOPCOUNT_READS_BY_CLASS {
     tag {"Class: $class_name"}
     
-    label 'process_low'
+    label 'process_high'
 
     input:
     tuple val(fastq_list), val(class_name)
@@ -173,7 +173,7 @@ process KPOPCOUNT_READS_BY_CLASS {
 process KPOPCOUNT_BY_CLASS_FROM_KPOPCOUNTER {
     tag {"Class: $class_name"}
     
-    label 'process_low'
+    label 'process_high'
 
     input:
     tuple val(sample_list), val(class_name), path(input_counter_file)
@@ -196,7 +196,7 @@ process KPOPCOUNT_BY_CLASS_FROM_KPOPCOUNTER {
 
 process KPOPCOUNT_COMBINE_CLASS_COUNTS {
     
-    label 'process_low'
+    label 'process_high'
 
     input:
     tuple path(raw_count_list), val(prefix)

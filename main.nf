@@ -71,7 +71,7 @@ Required arguments:
         --twisted_file                      Full path to .KPopTwisted file. Only required for --update workflow
         --twister_file                      Full path to .KPopTwister file. Only required for --update workflow
         --kpopcount_input                   .KPopCounter file as an input. \
-                                            Incompatible with --no_assembly, --match_reference, --input_dir, --accession_list, --max_dim and --meta_data options
+                                            Incompatible with --no_assembly, --match_reference, --input_dir, --accession_list and --meta_data options
         --kpopcount_test_input              .KPopCounter file as a test input. Only required if --classify workflow invoked. \
                                             Incompatible with --no_assembly, --match_reference, --input_dir, --accession_list, --max_dim and --meta_data options 
 
