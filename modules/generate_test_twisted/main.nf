@@ -47,10 +47,10 @@ process GENERATE_TEST_TWISTED_FROM_KPOPCOUNTER {
         twister_prefix=\$(echo $train_twister | sed 's/.KPopTwister//')
         counter_prefix=\$(echo $test_counter | sed 's/.KPopCounter//')
         KPopCountDB -i \$counter_prefix -t \$counter_prefix $args
-        for j in \$(seq 2 \$(awk '{print NF; exit}' \$counter_prefix.KPopCounter.txt)) ; 
+        for j in \$(seq 2 \$((\$(awk '{print NF; exit}' \${counter_prefix}.KPopCounter.txt)+1))) ; 
         do
-            cut -f1,\${j} \$counter_prefix.KPopCounter.txt
+            cut -f1,\${j} \${counter_prefix}.KPopCounter.txt
         done | KPopTwistDB -i T \$twister_prefix -k /dev/stdin -o t test $args2
-        rm \$counter_prefix.KPopCounter.txt
+        rm \${counter_prefix}.KPopCounter.txt
         """    
 }
