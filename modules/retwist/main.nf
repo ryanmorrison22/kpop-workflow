@@ -1,6 +1,6 @@
 process GENERATE_KPOPTWISTED {
 
-    label 'process_medium'
+    label 'process_high'
 
     input:
     tuple path(counter_file), val(prefix), path(twister_file), path(twisted_file)
@@ -14,15 +14,13 @@ process GENERATE_KPOPTWISTED {
         """
         twister_prefix=\$(echo $twister_file | sed 's/.KPopTwister//')
         counter_prefix=\$(echo $counter_file | sed 's/.KPopCounter//')
-        KPopCountDB -i \$counter_prefix -t updating $args
-        for i in \$(seq 2 \$((\$(awk '{print NF; exit}' updating.KPopCounter.txt)+1))) ; do cut -f1,\${i} updating.KPopCounter.txt ; done | KPopTwistDB -i T \$twister_prefix -k /dev/stdin -o t $prefix -v $args2
-        rm updating.KPopCounter.txt
+        $projectDir/bin/KPopCountDB -i \$counter_prefix -s /dev/stdout $args | KPopTwistDB -i T \$twister_prefix -k /dev/stdin -o t $prefix -v $args2
         """
 }
 
 process KPOPTWIST_UPDATE {
 
-    label 'process_medium'
+    label 'process_high'
 
     input:
     tuple path(updating_file), val(prefix), path(twister_file), path(twisted_file)
@@ -79,6 +77,6 @@ process UPDATE_PLOT {
         ${params.tree_type} \\
         ${params.tree_label_size} \\
 
-        $projectDir/bin/updated_tree.R \${twisted_prefix}.NJ.nwk \${updated_twisted_prefix}.NJ.nwk  ${prefix}_updated_comparison.pdf
+        $projectDir/bin/updated_tree.R \${twisted_prefix}.NJ.nwk \${updated_twisted_prefix}.NJ.nwk ${prefix}_updated_comparison.pdf
         """
 }

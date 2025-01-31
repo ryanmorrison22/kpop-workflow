@@ -1,6 +1,6 @@
 process GENERATE_TEST_TWISTED {
 
-    label 'process_low'
+    label 'process_high'
 
     input:
     tuple path(train_twister), path(train_twisted), path(test_fasta_list)
@@ -32,7 +32,7 @@ process GENERATE_TEST_TWISTED {
 
 process GENERATE_TEST_TWISTED_FROM_KPOPCOUNTER {
     
-    label 'process_low'
+    label 'process_high'
 
     input:
     tuple path(train_twister), path(train_twisted), path(test_counter)
@@ -46,11 +46,6 @@ process GENERATE_TEST_TWISTED_FROM_KPOPCOUNTER {
         """
         twister_prefix=\$(echo $train_twister | sed 's/.KPopTwister//')
         counter_prefix=\$(echo $test_counter | sed 's/.KPopCounter//')
-        KPopCountDB -i \$counter_prefix -t \$counter_prefix $args
-        for j in \$(seq 2 \$((\$(awk '{print NF; exit}' \${counter_prefix}.KPopCounter.txt)+1))) ; 
-        do
-            cut -f1,\${j} \${counter_prefix}.KPopCounter.txt
-        done | KPopTwistDB -i T \$twister_prefix -k /dev/stdin -o t test $args2
-        rm \${counter_prefix}.KPopCounter.txt
+        $projectDir/bin/KPopCountDB -i \$counter_prefix -s /dev/stdout $args | KPopTwistDB -i T \$twister_prefix -k /dev/stdin -o t test -v $args2
         """    
 }

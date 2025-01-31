@@ -12,19 +12,11 @@ process KPOPCOUNT {
         def args = task.ext.args ?: ''
         def args2 = task.ext.args2 ?: ''
         """
-        for file in $fasta_list ; do
-            baseName=\$(basename \$file | \\
-                sed 's/\\(.*\\).fasta.*/\\1/' | \\
-                sed 's/\\(.*\\).fa.*/\\1/' | \\
-                sed 's/_matched//g' | \\
-                sed 's/_trimmed//g')
-            if [[ \$file = *.gz ]]; then
-                open_file=zcat
-            else
-                open_file=cat
-            fi
-            KPopCount -l \$baseName -f <(\$open_file \$file) -k ${params.kmer_len} $args
-        done | KPopCountDB -k /dev/stdin -o $prefix -v $args2
+        ls $fasta_list | \\
+        Parallel -t $task.cpus -l 1 -- awk '{filename=\$0; basename=filename; gsub(/\\.(fasta\\.gz|fa\\.gz|fasta|fa|_matched|_trimmed)\$/, "", basename);
+            if(filename ~ /\\.gz\$/ ) { open_file = "zcat" } else { open_file = "cat" }; 
+            system(open_file " " filename " | KPopCount -l " basename " -f /dev/stdin -k "${params.kmer_len}" "$args)}' | \\
+        KPopCountDB -k /dev/stdin -o $prefix -v $args2
         """
 }
 
@@ -42,20 +34,11 @@ process KPOPCOUNT_BY_CLASS {
     script:
         def args = task.ext.args ?: ''
         """
-        for file in $fasta_list ; do
-            baseName=\$(basename \$file | \\
-                sed 's/\\(.*\\).fasta.*/\\1/' | \\
-                sed 's/\\(.*\\).fa.*/\\1/' | \\
-                sed 's/_matched//g' | \\
-                sed 's/_trimmed//g')
-            if [[ \$file = *.gz ]]; then
-                open_file=zcat
-            else
-                open_file=cat
-            fi
-            KPopCount -l \$baseName -f <(\$open_file \$file) -k ${params.kmer_len} $args 
-        done | \\
-        KPopCountDB -k /dev/stdin -R "~." -A "$class_name" -L "$class_name" -N -D -t /dev/stdout 2> /dev/null > \\
+        ls $fasta_list | \\
+        Parallel -t $task.cpus -l 1 -- awk '{filename=\$0; basename=filename; gsub(/\\.(fasta\\.gz|fa\\.gz|fasta|fa|_matched|_trimmed)\$/, "", basename);
+            if(filename ~ /\\.gz\$/ ) { open_file = "zcat" } else { open_file = "cat" }; 
+            system(open_file " " filename " | KPopCount -l " basename " -f /dev/stdin -k "${params.kmer_len}" "$args)}' | \\
+        KPopCountDB -k /dev/stdin -o _train -R "~." -A "$class_name" -L "$class_name" -N -D -t /dev/stdout 2> /dev/null > \\
         ${class_name}_raw_counts.txt
         gzip ${class_name}_raw_counts.txt
         """
@@ -185,9 +168,7 @@ process KPOPCOUNT_BY_CLASS_FROM_KPOPCOUNTER {
         def args = task.ext.args ?: ''
         """
         counter_file_prefix=\$(echo $input_counter_file | sed 's/.KPopCounter//')
-        echo $sample_list >> test5.txt
-        corrected_list=\$(echo $sample_list | sed 's/\\[//g' | sed 's/\\]//g' | sed 's/ //g')  
-        echo \$corrected_list >> test5.txt 
+        corrected_list=\$(echo $sample_list | sed 's/\\[//g' | sed 's/\\]//g' | sed 's/ //g')   
         KPopCountDB -i \$counter_file_prefix -L \$corrected_list -A $class_name -L $class_name -N -D -t $class_name 2> /dev/null $args
         mv ${class_name}.KPopCounter.txt ${class_name}_raw_counts.txt
         gzip ${class_name}_raw_counts.txt

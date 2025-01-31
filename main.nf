@@ -218,7 +218,7 @@ if (params.input_dir != "") { // If an input directory is supplied
     fasta_files
         .concat(fastq_files)
         .map {it -> it[0].fileName}
-        .filter{ if (it =~/[\[\]\?\*\ ]/) {throw new IllegalArgumentException("Value '$it' contains illegal character")} else { it }}
+        .filter{ if (it =~/[\[\]\?\*\ ]/) {throw new IllegalArgumentException("Value '$it' contains one of these illegal characters: '[', ']', '?', '*', ' '")} else { it }}
 
 } else {
     // Create empty channels if no fasta or fastq files found in input_dir, this allows for downloading of data from SRA
@@ -287,7 +287,7 @@ if (params.test_dir != "") {
     test_fasta_files
     .concat(test_fastq_files)
     .map {it -> it[0].fileName}
-    .filter{ if (it =~/[\[\]\?\*\ ]/) {throw new IllegalArgumentException("Value '$it' contains illegal character")} }
+    .filter{ if (it =~/[\[\]\?\*\ ]/) {throw new IllegalArgumentException("Value '$it' contains one of these illegal characters: '[', ']', '?', '*', ' '")} }
 
 } else {
 

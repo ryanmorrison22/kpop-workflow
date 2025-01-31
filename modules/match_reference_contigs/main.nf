@@ -27,6 +27,6 @@ process MATCH_REFERENCE_CONTIGS {
             $args \\
             | parse_lastz ${params.min_contig_match_len} ${params.min_contig_match_proportion} \\
             | cut -f1 | sort -u > ${prefix}_matching_contigs.txt
-        seqkit grep -f ${prefix}_matching_contigs.txt $combined_fasta_file | seqkit seq -w0 -o ${prefix}_matched.fasta.gz
+        seqkit grep -f ${prefix}_matching_contigs.txt $combined_fasta_file $args2 | seqkit seq -w0 -o ${prefix}_matched.fasta.gz $args2
         """
 }
