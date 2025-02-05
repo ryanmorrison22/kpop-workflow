@@ -5,13 +5,15 @@ include { KPOPCOUNT as KPOPCOUNT1 } from './modules/kpopCount'
 include { KPOPCOUNT as KPOPCOUNT2 } from './modules/kpopCount'
 include { KPOPCOUNT_BY_CLASS as KPOPCOUNT_BY_CLASS1 } from './modules/kpopCount'
 include { KPOPCOUNT_BY_CLASS as KPOPCOUNT_BY_CLASS2 } from './modules/kpopCount'
+include { KPOPCOUNT_READS_BY_CLASS as KPOPCOUNT_READS_BY_CLASS1 } from './modules/kpopCount'
+include { KPOPCOUNT_READS_BY_CLASS as KPOPCOUNT_READS_BY_CLASS2 } from './modules/kpopCount'
 include { KPOPCOUNT_COMBINE_CLASS_COUNTS as KPOPCOUNT_COMBINE_CLASS_COUNTS1 } from './modules/kpopCount'
 include { KPOPCOUNT_COMBINE_CLASS_COUNTS as KPOPCOUNT_COMBINE_CLASS_COUNTS2 } from './modules/kpopCount'
-include { KPOPCOUNT_READS_BY_CLASS } from './modules/kpopCount'
 include { KPOPCOUNT_READS as KPOPCOUNT_READS1 } from './modules/kpopCount'
 include { KPOPCOUNT_READS as KPOPCOUNT_READS2 } from './modules/kpopCount'
 include { KPOPCOUNT_BY_CLASS_FROM_KPOPCOUNTER } from './modules/kpopCount'
 include { GENERATE_TEST_TWISTED } from './modules/generate_test_twisted'
+include { GENERATE_TEST_TWISTED_FROM_READS } from './modules/generate_test_twisted'
 include { GENERATE_TEST_TWISTED_FROM_KPOPCOUNTER } from './modules/generate_test_twisted'
 include { KPOPPHYLO } from './modules/kpopPhylo'
 include { KPOPTWIST as KPOPTWIST1 } from './modules/kpopTwist'
@@ -185,6 +187,12 @@ if (params.kpopcount_input != "" && (params.no_assembly == true || params.match_
     exit 0
 }
 
+if (params.no_assembly == true && params.match_reference != "" ){
+    log.error"""--no_assembly is incompatible with --match_reference option as this workflow does not perform fastq mapping. Use --help for more information.
+    """.stripIndent()
+    exit 0
+}
+
 if (params.input_dir != "") { // If an input directory is supplied
     
     // Channels created for all fastas, paired fastas and all paired fastqs in input_dir
@@ -248,11 +256,20 @@ if (params.meta_data != "") {
         .splitCsv(header:true, sep: "\t")
         .map { row -> meta = [[fileName: row.fileName.toString().split("/")[-1]], [meta_class: row.class]] }
         .set {meta_file}
-    fasta_files
-        .join(meta_file)
-        .map {it -> [it[2], it[1]]}
-        .groupTuple(by: [0])
-        .set {meta_fasta_files}
+    
+    if (params.no_assembly) {
+        fastq_files
+            .join(meta_file)
+            .map {it -> [it[2], it[1]]}
+            .groupTuple(by: [0])
+            .set {meta_fastq_files}
+    } else {
+        fasta_files
+            .join(meta_file)
+            .map {it -> [it[2], it[1]]}
+            .groupTuple(by: [0])
+            .set {meta_fasta_files}
+    }
 } 
 
 // Channels created for all fastas, paired fastas and all paired fastqs in test_dir
@@ -473,8 +490,6 @@ workflow {
                     .splitCsv(header:true, sep: "\t")
                     .map { row -> meta = [[fileName: row.fileName.toString().split("/")[-1]], [new_class: "clusteredClass_${row.class}"]] }
                     .set {cluster_meta_file}
-                cluster_meta_file
-                    .map(it -> it[0])
 
                 fastq_files
                     .map( it -> [[fileName: it[0].fileName.toString()
@@ -489,7 +504,7 @@ workflow {
                     .map {it -> [it[1], it[0].new_class]}
                     .set {cluster_fastq_list}
 
-                KPOPCOUNT_READS_BY_CLASS(cluster_fastq_list)
+                KPOPCOUNT_READS_BY_CLASS1(cluster_fastq_list)
                     .collect()
                     .map(it -> [it, "clustered"])
                     .set {raw_fastq_cluster_count_list}
@@ -582,16 +597,36 @@ workflow {
 
         // Linking data to supplied metadata file if available, if not then each sample is treated as own class
         if (params.meta_data != "") {
-            assembled_fastas
-                .join(meta_file)
-                .map {it -> [it[2], it[1]]}
-                .concat(meta_fasta_files.transpose())
-                .set {concat_meta_fasta_files}
+            if (params.no_assembly) {
+                fastq_files
+                    .join(meta_file)
+                    .map {it -> [it[2], it[1]]}
+                    .concat(meta_fastq_files.transpose())
+                    .ifEmpty { 
+                        log.error "There are no matches in the meta file to the file names found in the input directory. Please remember to include the extensions for non-paired read inputs." 
+                        exit 1}
+                    .set {concat_meta_fastq_files}
+            } else {
+                assembled_fastas
+                    .join(meta_file)
+                    .map {it -> [it[2], it[1]]}
+                    .concat(meta_fasta_files.transpose())
+                    .ifEmpty { 
+                        log.error "There are no matches in the meta file to the file names found in the input directory. Please remember to include the extensions for non-paired read inputs." 
+                        exit 1}
+                    .set {concat_meta_fasta_files}
+            }
         } else {
-            assembled_fastas
-                .concat(fasta_files)
-                .map {it -> [[meta_class: it[0].fileName], it[1]]}
-                .set {concat_meta_fasta_files}
+            if (params.no_assembly) {
+                fastq_files
+                    .map {it -> [[meta_class: it[0].fileName], it[1]]}
+                    .set {concat_meta_fastq_files}
+            } else {
+                assembled_fastas
+                    .concat(fasta_files)
+                    .map {it -> [[meta_class: it[0].fileName], it[1]]}
+                    .set {concat_meta_fasta_files}
+            }
         }
 
         // Only use train sequences that match with reference if reference provided
@@ -605,36 +640,59 @@ workflow {
         }
 
         // Assemble test samples, calculate assembly stats and combine all files 
-        ASSEMBLE_FASTQS2(test_fastq_files)
-            .set {test_assembled_fastas}
-        ASSEMBLY_STATS2(test_assembled_fastas)
-        test_assembled_fastas.concat(test_fasta_files)
-            .set {test_concat_fasta_files}      
+        if (params.no_assembly) {
+            test_fastq_files
+                .map(it -> it[1].toString().replace(", ", "?")) //Need to replace the ", " with something unique so we can separate the files in KPOPCOUNT_READS 
+                .toSortedList()
+                .map(it -> [it, "test"])
+                .set {test_fastq_list}
 
-        // Only use test sequences that match with reference if reference provided
-        if (params.match_reference != "") {
+        } else {
+            ASSEMBLE_FASTQS2(test_fastq_files)
+                .set {test_assembled_fastas}
+            ASSEMBLY_STATS2(test_assembled_fastas)
+            test_assembled_fastas.concat(test_fasta_files)
+                .set {test_concat_fasta_files}  
+            // Only use test sequences that match with reference if reference provided
+            if (params.match_reference != "") {
+                test_concat_fasta_files
+                    .map(it -> [it[1], it[0].fileName.toString().split("/")[-1]
+                    .replace(".fasta.gz", "").replace(".fastq.gz", "")
+                    .replace(".fasta", "").replace(".fastq", "")
+                    .replace(".fa.gz", "").replace(".fq.gz", "")
+                    .replace(".fa", "").replace(".fq", ""), file(params.match_reference, checkIfExists: true)])
+                    .set {test_adjusted_concat_fasta_files}
+                MATCH_REFERENCE_CONTIGS2(test_adjusted_concat_fasta_files)
+                    .map(it -> [[fileName: it[1]], it[0]])
+                    .set {test_concat_fasta_files}
+            }
+            
             test_concat_fasta_files
-                .map(it -> [it[1], it[0].fileName.toString().split("/")[-1]
-                .replace(".fasta.gz", "").replace(".fastq.gz", "")
-                .replace(".fasta", "").replace(".fastq", "")
-                .replace(".fa.gz", "").replace(".fq.gz", "")
-                .replace(".fa", "").replace(".fq", ""), file(params.match_reference, checkIfExists: true)])
-                .set {test_adjusted_concat_fasta_files}
-            MATCH_REFERENCE_CONTIGS2(test_adjusted_concat_fasta_files)
-                .map(it -> [[fileName: it[1]], it[0]])
-                .set {test_concat_fasta_files}
-        }
-
-        test_concat_fasta_files
-            .map(it -> it[1])
-            .toSortedList()
-            .map(it -> [it, "test"])
-            .set {test_fasta_list}
+                .map(it -> it[1])
+                .toSortedList()
+                .map(it -> [it, "test"])
+                .set {test_fasta_list}
+        }    
 
         // Combine and count kmers training data
         if (params.kpopcount_input != "") { // If .KPopCount is supplied as input
             Channel
                 .fromPath( params.kpopcount_input )
+                .map(it -> [it, "train"])
+                .set {train_kpopcount_file}
+        } else if (params.no_assembly) { // If starting from reads
+            concat_meta_fastq_files
+                .map(it -> [it[0], it[1].toString().replace(", ", "?")]) //Need to replace the ", " with something unique so we can separate the files in KPOPCOUNT_READS 
+                .groupTuple(by: [0])
+                .map(it -> [it[1], it[0].meta_class])
+                .set {train_fastq_list}
+
+            KPOPCOUNT_READS_BY_CLASS1(train_fastq_list)
+                .collect()
+                .map(it -> [it, "train"])
+                .set {raw_class_count_list}
+
+            KPOPCOUNT_COMBINE_CLASS_COUNTS1(raw_class_count_list)
                 .map(it -> [it, "train"])
                 .set {train_kpopcount_file}
         } else {
@@ -653,48 +711,97 @@ workflow {
                 .set {train_kpopcount_file}
         }
 
-        if (params.max_dim != 0) { // If the dimension size is specified, else run all dimensions available        
-            concat_meta_fasta_files
-                | randomSample( params.max_dim+1, 1) 
-                | map(it -> it[1])
-                | toSortedList()
-                | map(it -> [it, "reduced_dim"])
-                | KPOPCOUNT2
-                | map(it -> [it, "reduced_dim"])
-                | KPOPTWIST1
-                | set {train_red_dim_kpoptwist_files}
-        
-            // Twisting all samples with reduced twister
-            GENERATE_KPOPTWISTED1(train_kpopcount_file.combine(train_red_dim_kpoptwist_files))
-                .map(it -> [it[0], "reduced_temp", it[2], it[3]])
-                .set {train_retwisted_files}
+        if (params.max_dim != 0) { // If the dimension size is specified, else run all dimensions available   
 
-            /// Create embeddings using KPopScale
-            CLUSTERING(train_retwisted_files)
-                .set {train_cluster_file}
+            if (params.no_assembly) { // If starting from reads
+                concat_meta_fastq_files
+                    | randomSample( params.max_dim+1, 1) 
+                    | map(it -> it[1].toString().replace(", ", "?")) //Need to replace the ", " with something unique so we can separate the files in KPOPCOUNT_READS 
+                    | toSortedList
+                    | map(it -> [it, "reduced_dim"])
+                    | KPOPCOUNT_READS2
+                    | map(it -> [it, "reduced_dim"])
+                    | KPOPTWIST1
+                    | set {train_red_dim_kpoptwist_files}
 
-            // KPopCount per cluster
-            train_cluster_file
-                .splitCsv(header:true, sep: "\t")
-                .map { row -> meta = [[meta_class: row.fileName], [new_class: "clusteredClass_${row.class}"]] }
-                .set {train_cluster_meta_file}
+                // Twisting all samples with reduced twister
+                GENERATE_KPOPTWISTED1(train_kpopcount_file.combine(train_red_dim_kpoptwist_files))
+                    .map(it -> [it[0], "reduced_temp", it[2], it[3]])
+                    .set {train_retwisted_files}
 
-            concat_meta_fasta_files
-                .groupTuple(by: [0])
-                .join(train_cluster_meta_file, by: [0][0])
-                .map {it -> [it[1], it[2]]}
-                .groupTuple(by: [1])
-                .map {it -> [it[0].flatten().toList(), it[1].new_class]}
-                .set {train_cluster_fasta_list}
+                /// Create embeddings using KPopScale
+                CLUSTERING(train_retwisted_files)
+                    .set {train_cluster_file}
+                
+                // KPopCount per cluster
+                train_cluster_file
+                    .splitCsv(header:true, sep: "\t")
+                    .map { row -> meta = [[meta_class: row.fileName], [new_class: "clusteredClass_${row.class}"]] }
+                    .set {train_cluster_meta_file}
 
-            KPOPCOUNT_BY_CLASS2(train_cluster_fasta_list)
-                .collect()
-                .map(it -> [it, "clustered"])
-                .set {raw_cluster_count_list}
+                concat_meta_fastq_files
+                    .map( it -> [it[0], it[1].toString().replace(", ", "?")])  //Need to replace the ", " with something unique so we can separate the files in KPOPCOUNT_READS_BY_CLASS
+                    .groupTuple(by: [0])
+                    .join(train_cluster_meta_file, by: [0][0])
+                    .map {it -> [it[1], it[2]]}
+                    .groupTuple(by: [1])
+                    .map {it -> [it[0].flatten().toList(), it[1].new_class]}
+                    .set {train_cluster_fastq_list}
 
-            KPOPCOUNT_COMBINE_CLASS_COUNTS2(raw_cluster_count_list)
-                .map(it -> [it, "clustered"])
-                .set {train_cluster_kpopcount_file}
+                KPOPCOUNT_READS_BY_CLASS2(train_cluster_fastq_list)
+                    .collect()
+                    .map(it -> [it, "clustered"])
+                    .set {raw_fastq_cluster_count_list}
+
+                KPOPCOUNT_COMBINE_CLASS_COUNTS2(raw_fastq_cluster_count_list)
+                    .map(it -> [it, "clustered"])
+                    .set {train_cluster_kpopcount_file}
+
+
+            } else {
+
+                concat_meta_fasta_files
+                    | randomSample( params.max_dim+1, 1) 
+                    | map(it -> it[1])
+                    | toSortedList()
+                    | map(it -> [it, "reduced_dim"])
+                    | KPOPCOUNT2
+                    | map(it -> [it, "reduced_dim"])
+                    | KPOPTWIST1
+                    | set {train_red_dim_kpoptwist_files}
+            
+                // Twisting all samples with reduced twister
+                GENERATE_KPOPTWISTED1(train_kpopcount_file.combine(train_red_dim_kpoptwist_files))
+                    .map(it -> [it[0], "reduced_temp", it[2], it[3]])
+                    .set {train_retwisted_files}
+
+                /// Create embeddings using KPopScale
+                CLUSTERING(train_retwisted_files)
+                    .set {train_cluster_file}
+
+                // KPopCount per cluster
+                train_cluster_file
+                    .splitCsv(header:true, sep: "\t")
+                    .map { row -> meta = [[meta_class: row.fileName], [new_class: "clusteredClass_${row.class}"]] }
+                    .set {train_cluster_meta_file}
+
+                concat_meta_fasta_files
+                    .groupTuple(by: [0])
+                    .join(train_cluster_meta_file, by: [0][0])
+                    .map {it -> [it[1], it[2]]}
+                    .groupTuple(by: [1])
+                    .map {it -> [it[0].flatten().toList(), it[1].new_class]}
+                    .set {train_cluster_fasta_list}
+
+                KPOPCOUNT_BY_CLASS2(train_cluster_fasta_list)
+                    .collect()
+                    .map(it -> [it, "clustered"])
+                    .set {raw_cluster_count_list}
+
+                KPOPCOUNT_COMBINE_CLASS_COUNTS2(raw_cluster_count_list)
+                    .map(it -> [it, "clustered"])
+                    .set {train_cluster_kpopcount_file}
+            }
 
             // Generate Twister file based on clusters
             KPOPTWIST2(train_cluster_kpopcount_file)
@@ -718,6 +825,11 @@ workflow {
             train_test_files = train_kpoptwist_files
                 .map(it -> [it[0][0], it[0][1], file(params.kpopcount_test_input)])
             train_test_kpop_files = GENERATE_TEST_TWISTED_FROM_KPOPCOUNTER(train_test_files)
+        } else if (params.no_assembly) { // If starting from reads
+            train_test_files = train_kpoptwist_files
+                .combine(test_fastq_list)
+                .map(it -> [it[0][0], it[0][1], it[2]])
+            train_test_kpop_files = GENERATE_TEST_TWISTED_FROM_READS(train_test_files)
         } else {
             train_test_files = train_kpoptwist_files
                 .combine(test_fasta_list)
