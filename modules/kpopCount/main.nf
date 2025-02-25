@@ -13,7 +13,7 @@ process KPOPCOUNT {
         def args2 = task.ext.args2 ?: ''
         """
         ls $fasta_list | \\
-        Parallel -t $task.cpus -l 1 -- awk '{filename=\$0; basename=filename; gsub(/\\.(fasta\\.gz|fa\\.gz|fasta|fa|_matched|_trimmed)\$/, "", basename);
+        Parallel -t $task.cpus -l 1 -- awk '{filename=\$0; basename=filename; gsub(/\\.(fasta\\.gz|fa\\.gz|fna\\.gz|fasta|fa|fna|_matched|_trimmed)\$/, "", basename);
             if(filename ~ /\\.gz\$/ ) { open_file = "zcat" } else { open_file = "cat" }; 
             system(open_file " " filename " | KPopCount -l " basename " -f /dev/stdin -k "${params.kmer_len}" "$args)}' | \\
         KPopCountDB -k /dev/stdin -o $prefix -v $args2
@@ -35,7 +35,7 @@ process KPOPCOUNT_BY_CLASS {
         def args = task.ext.args ?: ''
         """
         ls $fasta_list | \\
-        Parallel -t $task.cpus -l 1 -- awk '{filename=\$0; basename=filename; gsub(/\\.(fasta\\.gz|fa\\.gz|fasta|fa|_matched|_trimmed)\$/, "", basename);
+        Parallel -t $task.cpus -l 1 -- awk '{filename=\$0; basename=filename; gsub(/\\.(fasta\\.gz|fa\\.gz|fna\\.gz|fasta|fa|fna|_matched|_trimmed)\$/, "", basename);
             if(filename ~ /\\.gz\$/ ) { open_file = "zcat" } else { open_file = "cat" }; 
             system(open_file " " filename " | KPopCount -l " basename " -f /dev/stdin -k "${params.kmer_len}" "$args)}' | \\
         KPopCountDB -k /dev/stdin -o _train -R "~." -A "$class_name" -L "$class_name" -N -D -t /dev/stdout 2> /dev/null > \\

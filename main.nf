@@ -196,7 +196,7 @@ if (params.no_assembly == true && params.match_reference != "" ){
 if (params.input_dir != "") { // If an input directory is supplied
     
     // Channels created for all fastas, paired fastas and all paired fastqs in input_dir
-    FASTAS = "${params.input_dir}/*.{fasta,fa,fasta.gz,fa.gz}"
+    FASTAS = "${params.input_dir}/*.{fasta,fa,fna,fasta.gz,fa.gz,fna.gz}"
     FASTQS = "${params.input_dir}/*.{fastq,fq,fastq.gz,fq.gz}"
     PAIRED_FASTQS = "${params.input_dir}/*_{R1,R2}.{fastq,fq,fastq.gz,fq.gz}"
 
@@ -274,7 +274,7 @@ if (params.meta_data != "") {
 
 // Channels created for all fastas, paired fastas and all paired fastqs in test_dir
 if (params.test_dir != "") {
-    TEST_FASTAS = "${params.test_dir}/*.{fasta,fa,fasta.gz,fa.gz}"
+    TEST_FASTAS = "${params.test_dir}/*.{fasta,fa,fna,fasta.gz,fa.gz,fna.gz}"
     TEST_FASTQS = "${params.test_dir}/*.{fastq,fq,fastq.gz,fq.gz}"
     TEST_PAIRED_FASTQS = "${params.test_dir}/*_{R1,R2}.{fastq,fq,fastq.gz,fq.gz}"
     
@@ -405,6 +405,7 @@ workflow {
                     .map(it -> [it[1], it[0].fileName.toString().split("/")[-1]
                     .replace(".fasta.gz", "").replace(".fastq.gz", "")
                     .replace(".fasta", "").replace(".fastq", "")
+                    .replace(".fna", "").replace(".fna.gz", "")
                     .replace(".fa.gz", "").replace(".fq.gz", "")
                     .replace(".fa", "").replace(".fq", ""), file(params.match_reference, checkIfExists: true)])
                     .set {adjusted_concat_fasta_files}
@@ -545,6 +546,8 @@ workflow {
                         .replace(".fasta", "")
                         .replace(".fa.gz", "")
                         .replace(".fa", "")
+                        .replace(".fna", "")
+                        .replace(".fna.gz", "")
                         .replace("_matched", "")], it[1]])
                     .join(cluster_meta_file, by: [0])
                     .map {it -> [it[2], it[1]]}
@@ -660,6 +663,7 @@ workflow {
                     .replace(".fasta.gz", "").replace(".fastq.gz", "")
                     .replace(".fasta", "").replace(".fastq", "")
                     .replace(".fa.gz", "").replace(".fq.gz", "")
+                    .replace(".fna", "").replace(".fna.gz", "")
                     .replace(".fa", "").replace(".fq", ""), file(params.match_reference, checkIfExists: true)])
                     .set {test_adjusted_concat_fasta_files}
                 MATCH_REFERENCE_CONTIGS2(test_adjusted_concat_fasta_files)

@@ -5,6 +5,7 @@ channels:
 dependencies:
   - nextflow >= 24.04.0
   - kpop
+  - biocamlib
   - bash >= 4.4.18
   - r-base >= 4.2.3
   - r-tidyverse
