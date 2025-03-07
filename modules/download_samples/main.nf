@@ -6,7 +6,7 @@ process DOWNLOAD_SRAS {
     path(list_file)
  
     output:
-    path("*/*.sra")
+    path("*")
 
     script:
         def args = task.ext.args ?: ''
@@ -18,10 +18,10 @@ process DOWNLOAD_SRAS {
 process FASTERQ_DUMP {
     tag {"$sra_file"}
 
-    label 'process_low'
+    label 'process_medium'
 
     input:
-    path(sra_file)
+    path(sra_dir)
  
     output:
     tuple eval("echo \$filename"), path("*.fastq.gz")
@@ -29,7 +29,7 @@ process FASTERQ_DUMP {
     script:
         def args = task.ext.args ?: ''
         """
-        prefix=`basename $sra_file .sra`
+	prefix=`basename $sra_dir`
         fasterq-dump \$prefix --threads $task.cpus $args
         gzip \${prefix}*.fastq
         if [ -f \${prefix}_1.fastq.gz ]; then
