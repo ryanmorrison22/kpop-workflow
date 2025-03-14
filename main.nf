@@ -325,7 +325,13 @@ if (params.test_dir != "") {
 workflow {
     /// Download training set
     if (params.accession_list != "") {
-        DOWNLOAD_SRAS1(file(params.accession_list))
+        Channel
+            .fromPath(params.accession_list)
+            .splitText()
+            .map { it.trim() }
+            .filter { it.length() > 0 }
+            .set {accessions_for_download}
+	DOWNLOAD_SRAS1(accessions_for_download)
             .flatten()
             .set {SRA_FILES}
         FASTERQ_DUMP1(SRA_FILES)
@@ -336,7 +342,13 @@ workflow {
 
     /// Download test set
     if (params.test_accession_list != "") {
-        DOWNLOAD_SRAS2(file(params.test_accession_list))
+        Channel
+            .fromPath(params.test_accession_list)
+            .splitText()
+            .map { it.trim() }
+            .filter { it.length() > 0 }
+            .set {test_accessions_for_download}
+        DOWNLOAD_SRAS2(test_accessions_for_download)
             .flatten()
             .set {TEST_SRA_FILES}
         FASTERQ_DUMP2(TEST_SRA_FILES)

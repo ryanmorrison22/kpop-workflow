@@ -1,9 +1,10 @@
 process DOWNLOAD_SRAS {
+    tag {"$accession"}
 
     label 'process_medium'
 
     input:
-    path(list_file)
+    val(accession)
  
     output:
     path("*")
@@ -11,12 +12,12 @@ process DOWNLOAD_SRAS {
     script:
         def args = task.ext.args ?: ''
         """
-        prefetch --option-file $list_file $args
+        prefetch $accession $args
         """
 }
 
 process FASTERQ_DUMP {
-    tag {"$sra_file"}
+    tag {"$sra_dir"}
 
     label 'process_medium'
 
@@ -29,7 +30,7 @@ process FASTERQ_DUMP {
     script:
         def args = task.ext.args ?: ''
         """
-	prefix=`basename $sra_dir`
+        prefix=`basename $sra_dir`
         fasterq-dump \$prefix --threads $task.cpus $args
         gzip \${prefix}*.fastq
         if [ -f \${prefix}_1.fastq.gz ]; then
