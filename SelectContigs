@@ -1,0 +1,252 @@
+#!/usr/bin/env bash
+
+set -e
+
+function decompress {
+  local INPUT="$1"
+  case $(file "$INPUT" | awk -F ': ' '{print $2}') in
+    "ASCII text"* )
+      cat "$INPUT"
+      ;;
+    "gzip compressed data"* )
+      gunzip -c "$INPUT"
+      ;;
+    "bzip2 compressed data"* )
+      bunzip2 -c "$INPUT"
+      ;;
+    * )
+      echo -e "\nERROR: Sorry, your input file \"${INPUT}\" has a format I do not recognize"
+      exit 1
+      ;;
+  esac
+}
+
+# This function mangles sequence names in FASTA files
+function normalize_fasta_names {
+  local TABLE="$1"
+  FASTools | awk -F '\t' -v TABLE="$TABLE" '
+    {
+      if ($1~"\t") {
+        print "ERROR: <TAB> character(s) found in sequence name \""$1"\"" > "/dev/stderr"
+        exit 1
+      }
+      normalized=gensub("[_]+","_","g",gensub("[^-0-9A-Za-z_$%^+:@#.~|]","_","g",$1))
+      if (normalized in t) {
+        print "ERROR: Duplicated normalized sequence name \""normalized"\"" > "/dev/stderr"
+        exit 1
+      }
+      t[normalized]=$1
+      print ">"normalized"\n"$2
+    }
+    END {
+      for (i in t)
+        print i"\t"t[i] > TABLE;
+    }
+  '
+}
+
+function select_contigs() (
+  local CONTIGS_ORIG="$1"
+  local REFERENCE_ORIG="$2"
+  local OUTPUT_PREFIX="$3"
+  local LASTZ_STEP="$4"
+  local MIN_LENGTH="$5"
+  local MIN_FRACTION="$6"
+  if [[ "$LASTZ_STEP" == "" ]]; then
+    LASTZ_STEP="20"
+  fi
+  if [[ "$MIN_LENGTH" == "" ]]; then
+    MIN_LENGTH="250"
+  fi
+  if [[ "$MIN_FRACTION" == "" ]]; then
+    MIN_FRACTION="0.6"
+  fi
+  local TMP_DIR="$(mktemp -d -p .)"
+  if [[ "$TMP_DIR" != "" ]]; then
+    # Doubt this one is ever needed # rm -f "$TMP_DIR"/*
+    function parse_lastz {
+      local MIN_LENGTH="$1"
+      local MIN_FRACTION="$2"
+      # Recombine strands by inverting the target interval when necessary
+      awk '
+        BEGIN {
+          t["++"]="+"
+          t["+-"]="-"
+          t["-+"]="-"
+          t["--"]="+"
+        }
+        {
+          print $1"\t"$2"\t"$4"\t"$5"\t"$6"\t"$7"\t"(t[$3$8]=="+"?$9"\t"$10:$10"\t"$9)"\t"gensub("%$","",1,$12)"\t"$13
+        }
+      ' |
+      # Format has 10 columns by now:
+      #  query_name query_len query_lo query_hi ref_name ref_len ref_lo ref_hi similarity_in_% LASTZ_score
+      # We find the reference sequence giving the best decomposition of the query
+      sort -t$'\t' -k1,1 -k5,5 -k3,3n -k4,4n | awk -F '\t' '
+        {
+          print $1"\t"$2"\t"$5"\t"$6"\t"$3"\t(\t"$9"\n"$1"\t"$2"\t"$5"\t"$6"\t"$4"\t)\t"$9
+        }
+      ' | sort -t$'\t' -k1,1 -k3,3 -k5,5n -k6,6 -k7,7n | awk -F '\t' '
+        {
+          current=$1"\t"$2"\t"$3"\t"$4"\t"$5
+          if (current!=old) {
+            if (old!="")
+              printf "\n";
+            printf current"\t"$6"\t"$7
+            old=current
+          } else {
+            printf "\t"$6"\t"$7
+          }
+        }
+        END {
+          if (old!="")
+            printf "\n"
+        }
+      ' | awk -F '\t' '
+        function update() {
+          for (i=6;i<NF;i+=2) {
+            if ($i=="(") {
+              ++open
+              ++t[$(i+1)]
+            } else {
+              --open
+              if (t[$(i+1)]==1)
+                delete t[$(i+1)];
+              else
+                --t[$(i+1)]
+            }
+          }
+          return
+        }
+        function get_max(  i,res) {
+          for (i in t) {
+            res=i
+            break
+          }
+          return res
+        }
+        BEGIN {
+          PROCINFO["sorted_in"]="@ind_num_desc"
+          open=0
+        }
+        {
+          if (open==0) {
+            printf $1"\t"$2"\t"$3"\t"$4"\t"$5"\t(\t"
+            update()
+            print get_max()
+          } else {
+            old=get_max()
+            update()
+            new=get_max()
+            if (open==0)
+              print $1"\t"$2"\t"$3"\t"$4"\t"$5"\t)";
+            else if (new!=old)
+              print $1"\t"$2"\t"$3"\t"$4"\t"($5+1)"\t=\t"new
+          }
+        }
+      ' | awk -F '\t' '
+        {
+          if ($6=="(") {
+            sum=0
+            wei_sum=0.
+            lo=$5
+            frac=$7/100.
+          } else if ($6=="=") {
+            delta=($5-lo)
+            sum+=delta
+            wei_sum+=(delta*frac)
+            lo=$5
+            frac=$7/100
+          } else {
+            delta=($5-lo+1)
+            sum+=delta
+            wei_sum+=(delta*frac)
+            print $1"\t"$2"\t"$3"\t"$4"\t"sum"\t"sprintf("%0.1f",wei_sum)"\t"sprintf("%0.3f",wei_sum/sum)
+          }
+        }
+      ' |
+      # We collect the segments for the same reference
+      awk -F '\t' '
+        {
+          what=$1"\t"$2"\t"$3"\t"$4
+          sum[what]+=$5
+          wei_sum[what]+=$6
+        }
+        END {
+          for (what in sum)
+            print what"\t"sum[what]"\t"sprintf("%0.1f",wei_sum[what])
+        }
+      ' | awk -F '\t' '
+        {
+          print $0"\t"sprintf("%0.3f",$5/$2)"\t"sprintf("%0.3f",$6/$2)
+        }
+      ' |
+      # Format has 8 columns:
+      #  query_name query_len ref_name ref_len query_acc_match_len query_eff_match_len query_match_similarity query_eff_match_similarity
+      # We select the best reference for each contig based on column #6
+      awk '
+        {
+          if (!($1 in max)||$6>max[$1]) {
+            max[$1]=$6
+            best[$1]=$0
+          }
+        }
+        END {
+          for (i in max)
+            print best[i];
+        }
+      ' | sort -k1,1 |
+      # We filter contigs...
+      awk -v MIN_LENGTH="$MIN_LENGTH" -v MIN_FRACTION="$MIN_FRACTION" '{if ($6>=MIN_LENGTH&&$7>=MIN_FRACTION) print}' |
+      # ...and sort them by decreasing length
+      sort -k2,2nr -k1,1   
+    }
+    local CONTIGS="${TMP_DIR}/QUERY.fasta"
+    local CONTIGS_TABLE="${TMP_DIR}/QUERY_NAMES.txt"
+    local REFERENCE="${TMP_DIR}/REFERENCE.fasta"
+    local REFERENCE_TABLE="${TMP_DIR}/REFERENCE_NAMES.fasta"
+    # We normalise names of both contigs and reference sequences
+    decompress "$CONTIGS_ORIG" | normalize_fasta_names "$CONTIGS_TABLE" > "$CONTIGS"
+    decompress "$REFERENCE_ORIG" | normalize_fasta_names "$REFERENCE_TABLE" > "$REFERENCE"
+    lastz "$REFERENCE"[multiple,unmask] <(decompress "$CONTIGS")[unmask] \
+          --ambiguous=iupac --step="$LASTZ_STEP" --nogapped --notransition \
+          --format=general-:name2,size2,strand2,start2,end2,name1,size1,strand1,start1,end1,identity,score |
+      tee "${TMP_DIR}/LASTZ.txt" | parse_lastz "$MIN_LENGTH" "$MIN_FRACTION" |
+      tee >( awk -F '\t' -v CONTIGS_TABLE="$CONTIGS_TABLE" -v REFERENCE_TABLE="$REFERENCE_TABLE" '
+        BEGIN {
+          while (getline < CONTIGS_TABLE)
+            c[$1]=$2;
+          while (getline < REFERENCE_TABLE)
+            r[$1]=$2;
+          OFS="\t"
+        }
+        {
+          $1=c[$1]
+          $3=r[$3]
+          print
+        }
+      ' > "${OUTPUT_PREFIX}.selected.txt" ) |
+      awk -F '\t' -v CONTIGS="$CONTIGS" -v CONTIGS_TABLE="$CONTIGS_TABLE" '
+        {
+          t[$1]
+        }
+        END {
+          while (getline < CONTIGS_TABLE)
+            c[$1]=$2;
+          job="FASTools -f \""CONTIGS"\""
+          while (job |& getline)
+            if ($1 in t)
+              print ">"c[$1]"\n"$2;
+        }
+      ' > "${OUTPUT_PREFIX}.selected.fasta"
+    rm -rf "$TMP_DIR"
+  fi
+)
+
+if [[ "$1" == "" || "$2" == "" || "$3" == "" ]]; then
+  echo "Syntax: SelectContigs <contigs_fasta> <reference_fasta> <output_prefix> [<lastz_step> [<min_length> [<min_fraction>]]]"
+  exit 1
+fi
+
+select_contigs "$1" "$2" "$3" "$4" "$5" "$6"
+
