@@ -4,7 +4,7 @@ A simplified workflow to run KPop (https://www.biorxiv.org/content/10.1101/2022.
 To run the workflow you'll first need to create the kpop environment using the enviroment.yml file and activate the kpop environment 
 ```
 conda env create -f environment.yml
-conda activate kpop​
+conda activate kpop
 ```
 
 Currently, there are three main workflows:
