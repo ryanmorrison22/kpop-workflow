@@ -46,8 +46,8 @@ function normalize_fasta_names {
 }
 
 function select_contigs() (
-  local CONTIGS_ORIG="$1"
-  local REFERENCE_ORIG="$2"
+  local CONTIGS_ORIG=$(realpath "$1")
+  local REFERENCE_ORIG=$(realpath "$2")
   local OUTPUT_PREFIX="$3"
   local LASTZ_STEP="$4"
   local MIN_LENGTH="$5"

@@ -169,8 +169,8 @@ if (params.classify && params.meta_data == "" && params.kpopcount_input == ""){
 }
 
 // Define errors
-if (params.input_dir == "" && params.accession_list == "" && params.kpopcount_input == ""){
-    log.error"""--input_dir or --accession_list or --kpopcount_input required for workflow. Use --help for more information.
+if (!params.update && params.input_dir == "" && params.accession_list == "" && params.kpopcount_input == ""){
+    log.error"""--input_dir or --accession_list or --kpopcount_input required for --cluster and --classify workflows. Use --help for more information.
     """.stripIndent()
     exit 0
 }
@@ -183,6 +183,12 @@ if (params.classify && params.test_dir == "" && params.test_accession_list == ""
 
 if (params.kpopcount_input != "" && (params.no_assembly == true || params.match_reference != "" || params.input_dir != "" || params.accession_list != "" || params.meta_data != "")){
     log.error"""--kpopcount_input is incompatible with --no_assembly, --match_reference, --input_dir, --accession_list, and --meta_data options. Use --help for more information.
+    """.stripIndent()
+    exit 0
+}
+
+if (params.update && (params.twisted_file == "" || params.twister_file == "")){
+    log.error"""--twister_file and --twisted_file options needed when calling --update. Use --help for more information.
     """.stripIndent()
     exit 0
 }
@@ -422,7 +428,7 @@ workflow {
                     .replace(".fa", "").replace(".fq", ""), file(params.match_reference, checkIfExists: true)])
                     .set {adjusted_concat_fasta_files}
                 MATCH_REFERENCE_CONTIGS1(adjusted_concat_fasta_files)
-                    .map(it -> [[fileName: it[1]], it[0]])
+                    .map(it -> [[fileName: it[2]], it[0]])
                     .set {concat_fasta_files}
                 }
             concat_fasta_files
@@ -510,7 +516,7 @@ workflow {
                         .replace(".fastq", "")
                         .replace(".fq.gz", "")
                         .replace(".fq", "")
-                        .replace("_matched", "")], it[1].toString().replace(", ", "?")])  //Need to replace the ", " with something unique so we can separate the files in KPOPCOUNT_READS_BY_CLASS
+                        .replace(".selected", "")], it[1].toString().replace(", ", "?")])  //Need to replace the ", " with something unique so we can separate the files in KPOPCOUNT_READS_BY_CLASS
                     .join(cluster_meta_file, by: [0])
                     .map {it -> [it[2], it[1]]}
                     .groupTuple(by: [0])
@@ -560,7 +566,7 @@ workflow {
                         .replace(".fa", "")
                         .replace(".fna", "")
                         .replace(".fna.gz", "")
-                        .replace("_matched", "")], it[1]])
+                        .replace(".selected", "")], it[1]])
                     .join(cluster_meta_file, by: [0])
                     .map {it -> [it[2], it[1]]}
                     .groupTuple(by: [0])
@@ -650,7 +656,7 @@ workflow {
                 .map(it -> [it[1], "${it[0].meta_class}_${it[1].getBaseName(file(it[1]).name.endsWith('.gz')? 2: 1)}", file(params.match_reference, checkIfExists: true)])
                 .set {adjusted_concat_meta_fasta_files}
             MATCH_REFERENCE_CONTIGS1(adjusted_concat_meta_fasta_files)
-                .map(it -> [[meta_class: it[1].toString().split("_")[0]], it[0]])
+                .map(it -> [[meta_class: it[2].toString().split("_")[0]], it[0]])
                 .set {concat_meta_fasta_files}
         }
 
@@ -679,7 +685,7 @@ workflow {
                     .replace(".fa", "").replace(".fq", ""), file(params.match_reference, checkIfExists: true)])
                     .set {test_adjusted_concat_fasta_files}
                 MATCH_REFERENCE_CONTIGS2(test_adjusted_concat_fasta_files)
-                    .map(it -> [[fileName: it[1]], it[0]])
+                    .map(it -> [[fileName: it[2]], it[0]])
                     .set {test_concat_fasta_files}
             }
             
@@ -881,7 +887,7 @@ workflow {
                     .map(it -> [it[1], it[0].fileName, file(params.match_reference, checkIfExists: true)])
                     .set {adjusted_concat_fasta_files}
                 MATCH_REFERENCE_CONTIGS1(adjusted_concat_fasta_files)
-                    .map(it -> [[fileName: it[1]], it[0]])
+                    .map(it -> [[fileName: it[2]], it[0]])
                     .set {concat_fasta_files}
             }
 
