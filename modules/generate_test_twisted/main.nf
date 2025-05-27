@@ -14,7 +14,7 @@ process GENERATE_TEST_TWISTED {
         """
         twister_prefix=\$(echo $train_twister | sed 's/.KPopTwister//')
         ls $test_fasta_list | \\
-        Parallel -t $task.cpus -l 1 -- awk '{filename=\$0; basename=filename; gsub(/\\.(fasta\\.gz|fa\\.gz|fna\\.gz|fasta|fa|fna|_matched|_trimmed)\$/, "", basename);
+        Parallel -t $task.cpus -l 1 -- awk '{filename=\$0; basename=filename; gsub(/\\.fasta\\.gz\$|\\.fa\\.gz\$|\\.fna\\.gz\$|\\.fasta\$|\\.fa\$|\\.fna\$|\\.selected|_trimmed/, "", basename);
             if(filename ~ /\\.gz\$/ ) { open_file = "zcat" } else { open_file = "cat" }; 
             system(open_file " " filename " | KPopCount -l " basename " -f /dev/stdin -k "${params.kmer_len}" "$args)}' | \\
         KPopTwistDB -i T \$twister_prefix -k /dev/stdin -o t test $args2

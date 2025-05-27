@@ -515,8 +515,7 @@ workflow {
                         .replace(".fastq.gz", "")
                         .replace(".fastq", "")
                         .replace(".fq.gz", "")
-                        .replace(".fq", "")
-                        .replace(".selected", "")], it[1].toString().replace(", ", "?")])  //Need to replace the ", " with something unique so we can separate the files in KPOPCOUNT_READS_BY_CLASS
+                        .replace(".fq", "")], it[1].toString().replace(", ", "?")])  //Need to replace the ", " with something unique so we can separate the files in KPOPCOUNT_READS_BY_CLASS
                     .join(cluster_meta_file, by: [0])
                     .map {it -> [it[2], it[1]]}
                     .groupTuple(by: [0])
@@ -864,7 +863,13 @@ workflow {
     /// Update workflow
 
     if (params.update) {
-        if (params.no_assembly) { // If starting from reads
+
+        if (params.kpopcount_input != "") { // If .KPopCount is supplied as input
+            Channel
+                .fromPath( params.kpopcount_input )
+                .map(it -> [it, "temp", file(params.twister_file), file(params.twisted_file)])
+                .set {kpopcount_file}
+        } else if (params.no_assembly) { // If starting from reads
 
             //TO DO: USE READS THAT MAP ONLY TO A REFERENCE
 

@@ -20,7 +20,7 @@ nextflow run main.nf --classify --input_dir /dir/containing/training/fastqAndFas
 
 3. Update transformational database workflow - starting with an unknown dataset and previous transformational database files, the new data is added to the existing database, creating updated .KPopTwister and KPopTwisted files and a new pseudo-phylogenetic tree.
 ```
-nextflow run main.nf --update --test_dir /dir/containing/new/fastqAndFastas --twister_file /path/to/KPopTwister/file --twisted_file /path/to/KPopTwisted/file
+nextflow run main.nf --update --input_dir /dir/containing/new/fastqAndFastas --twister_file /path/to/KPopTwister/file --twisted_file /path/to/KPopTwisted/file
 ```
 
 All workflows create lots of files, but the most important outputs are the database files (`.KPopTwister` and `.KPopTwisted` in KPopTwist_files) and KPop pseudo-phylogenetic tree found in `results/trees_and_metrics/output_2.<nwk/pdf>` (`--cluster`), the class/species predictions found in `results/predictions/output.<predictions/KPopSummary>.txt` (`--classify`) and the updated database files (`<output_prefix>.KPopTwisted` and `<output_prefix>.KPopTwisted`) and `updated_comparison.pdf` plot in `updated_KPopTwist_files` (`--update`).
